@@ -1,0 +1,337 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <!--Setting-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta http-equiv="Cache-Control" content="no-siteapp">
+    <meta http-equiv="Cache-Control" content="no-transform">
+    <meta name="renderer" content="webkit|ie-comp|ie-stand">
+    <meta name="apple-mobile-web-app-capable" content="Hexo">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no,email=no,adress=no">
+    <meta name="browsermode" content="application">
+    <meta name="screen-orientation" content="portrait">
+    <meta name="theme-version" content="1.2.3">
+    <meta name="root" content="/blog/">
+    <link rel="dns-prefetch" href="http://crazy_ll.gitee.io/blog">
+    <!--SEO-->
+
+<meta name="keywords" content>
+
+
+<meta name="description" content="
+
+在了解G1收集器的时候，看到书中描述
+
+分成多个Region区域的难点：Region不可能孤立。一个对象分配在某个Region中，会被堆中任意的对象发生引用关系。在判断可达性确定对象是否存活...">
+
+
+<meta name="robots" content="all">
+<meta name="google" content="all">
+<meta name="googlebot" content="all">
+<meta name="verify" content="all">
+    <!--Title-->
+
+<title>
+    
+    GC过程 |
+    
+    Hexo
+</title>
+
+<link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+
+
+<link rel="icon" href="/favicon.ico">
+
+    
+
+<link rel="stylesheet" href="/blog/css/bootstrap.min.css?rev=3.3.7">
+<link rel="stylesheet" href="/blog/css/font-awesome.min.css?rev=4.7.0">
+<link rel="stylesheet" href="/blog/css/style.css?rev=@@hash">
+    
+<div class="hide">
+    <script type="text/javascript">
+    var cnzz_protocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+    document.write(unescape("%3Cspan class='cnzz_stat_icon_1263868967 hide' %3E%3Cscript%20src%3D%22https%3A%2F%2Fs95.cnzz.com%2Fz_stat.php%3Fweb_id%3D1272564536%22%3E%3C%2Fscript%3E%3C/span%3E%3Cscript src='" + cnzz_protocol + "s19.cnzz.com/z_stat.php%3Fid%3D1263868967%26show%3Dpic1' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+</div>
+
+
+
+
+    
+
+</head></html>
+<!--[if lte IE 8]>
+<style>
+    html{ font-size: 1em }
+</style>
+<![endif]-->
+<!--[if lte IE 9]>
+<div style="ie">你使用的浏览器版本过低，为了你更好的阅读体验，请更新浏览器的版本或者使用其他现代浏览器，比如Chrome、Firefox、Safari等。</div>
+<![endif]-->
+<body>
+    <header class="main-header"  style="background-image:url(
+    http://snippet.shenliyang.com/img/banner.jpg)"
+     >
+    <div class="main-header-box">
+        <a class="header-avatar" href="/" title='John Doe'>
+            <img src="/blog/img/avatar.jpg" alt="logo头像" class="img-responsive center-block">
+        </a>
+        <div class="branding">
+            <!--<h2 class="text-hide">Snippet主题,从未如此简单有趣</h2>-->
+            
+            <img src="/blog/img/branding.png" alt="Snippet 博客主题" class="img-responsive center-block">
+            
+        </div>
+    </div>
+</header>
+    <nav class="main-navigation">
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="navbar-header"><span class="nav-toggle-button collapsed pull-right" data-toggle="collapse" data-target="#main-menu" id="mnav">
+                        <span class="sr-only"></span>
+                        <i class="fa fa-bars"></i>
+                    </span>
+                    <a class="navbar-brand" href="http://crazy_ll.gitee.io/blog">
+                        Hexo</a>
+                </div>
+                <div class="collapse navbar-collapse" id="main-menu">
+                    <ul class="menu">
+                        
+                        <li role="presentation" class="text-center">
+                            <a href="/"><i class="fa "></i>
+                                Home</a>
+                        </li>
+                        
+                        <li role="presentation" class="text-center">
+                            <a href="/categories/前端/"><i class="fa "></i>
+                                前端</a>
+                        </li>
+                        
+                        <li role="presentation" class="text-center">
+                            <a href="/categories/后端/"><i class="fa "></i>
+                                后端</a>
+                        </li>
+                        
+                        <li role="presentation" class="text-center">
+                            <a href="/categories/工具/"><i class="fa "></i>
+                                工具</a>
+                        </li>
+                        
+                        <li role="presentation" class="text-center">
+                            <a href="/archives/"><i class="fa "></i>
+                                时间轴</a>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+    <section class="content-wrap">
+        <div class="container">
+            <div class="row">
+                <main class="col-md-8 main-content m-post">
+                    <p id="process"></p>
+<article class="post">
+    <div class="post-head">
+        <h1 id="GC过程">
+            
+            GC过程
+            
+        </h1>
+        <div class="post-meta">
+    
+    <span class="categories-meta fa-wrap">
+        <i class="fa fa-folder-open-o"></i>
+        <a class="category-link" href="/blog/categories/JVM/">JVM</a>
+    </span>
+    
+    
+    <span class="fa-wrap">
+        <i class="fa fa-tags"></i>
+        <span class="tags-meta">
+            
+        </span>
+    </span>
+    
+    
+    
+    <span class="fa-wrap">
+        <i class="fa fa-clock-o"></i>
+        <span class="date-meta">
+            2019/09/04</span>
+    </span>
+    
+    
+</div>
+        
+        
+    </div>
+    
+    <div class="post-body post-content">
+        <!-- toc -->
+
+<p>在了解G1收集器的时候，看到书中描述</p>
+<blockquote>
+<p>分成多个Region区域的难点：Region不可能孤立。一个对象分配在某个Region中，会被堆中任意的对象发生引用关系。在判断可达性确定对象是否存活的时候，那就得需要扫描整个Java堆。这个问题不是只在G1中才有，只是在G1中更加突出。在之前的分代收集中，新生代一半比老年代小许多，新生代的收集也比老年代的频繁，回收新生代的对象也面临相同的问题，如果回收新生代也要扫描老年代的话，Minor GC的效率可能会下降不少。(在gc的时候会去扫全堆，但是通过后面的Remembered Set来避免了扫全堆)</p>
+</blockquote>
+<p>那么就有了疑问</p>
+<ul>
+<li>这个Remembered Set是什么？</li>
+<li>确定对象是否存活不是通过GC Roots来分析调用链么，为什么会有扫描堆的概念？</li>
+<li>这个扫描堆和GC Roots的关系是什么？</li>
+<li>具体的GC过程是什么样子的？</li>
+<li>分代收集如何避免扫描不需要收集的区域？</li>
+</ul>
+<h1 id="GC大致流程"><a href="#GC大致流程" class="headerlink" title="GC大致流程"></a>GC大致流程</h1><p>假如触发了Minor GC，这时候需要对新生代的对象进行复制，复制的前提是要知道哪些对象需要被回收，所以在这之前会对新生代的对象做可达性分析，可达性分析不是随时都可以进行的，需要等待程序运行到安全点才行，可达性分析是通过枚举GC Roots，如果没有引用到达这个对象的话，那么就会被判断为可回收，jvm真正清理一个对象需要进行两次标记（第一次标记并且筛选出实现了finalize或者finalize未执行的放入F-Queue队列由一个优先级很低线程去执行，未实现的就直接gc，而F-Queue中会进行小规模的第二次标记），jvm清理了未引用的对象以后，就可以用复制将新生代中的空间回收。</p>
+<h2 id="保守gc-半保守gc-准确gc"><a href="#保守gc-半保守gc-准确gc" class="headerlink" title="保守gc 半保守gc 准确gc"></a>保守gc 半保守gc 准确gc</h2><p>首先，我们需要清理的是堆中的信息，堆中的数据都是引用类型，但是对于JVM来说，JVM如果不做任何额外的处理，它是无法知道内存上某个位置的数据到底是解读成什么类型。</p>
+<h3 id="保守式GC"><a href="#保守式GC" class="headerlink" title="保守式GC"></a>保守式GC</h3><p>在上面所说的这种情况下，只能通过猜测来判断类型，这种就称为“==保守式GC==”，在进行GC的时候，JVM会开始从一些已知的位置（JVM栈）开始扫描内存，扫描到数据的时候会看他看起来像不像一个指针，会涉及上下边界检查，GC堆的上下边界是已知的，对齐检查，通常分配空间的时候会有对齐要求，比如说4字节对齐，如果不能被4整除那么就一定不是针织，然后递归扫描。</p>
+<p>保守式GC的好处是实现简单，可以方便的用在对GC没有特别支持的编程语言中提供自动内存管理功能</p>
+<p>缺点：</p>
+<ul>
+<li>会有部分对象本来应该死了，但是有疑似指针指向他们，逃过GC的收集</li>
+<li>由于不知道疑似指针是否真的是指针，所以它的值都不能修改，对象就不可以移动了。有一种方式可以实现，就是采用句柄作为中间层，但是这样引用的访问速度就降低了</li>
+</ul>
+<p>由于JVM需要丰富的反射功能，本身就需要让对象能够了解自身的结构，而这种信息GC也可以利用，所以很少有JVM会使用完全保守式GC。</p>
+<h3 id="半保守GC"><a href="#半保守GC" class="headerlink" title="半保守GC"></a>半保守GC</h3><p>JVM可以选择在站上不记录类型信息，而在对象上记录类型信息，但是扫描栈的时候仍然会有上面保守GC的情况，但是扫描到堆中的对象的时候，因为已经记录了类型信息，所以JVM就能判断出对象内的什么位置的数据是引用类型了，这种就称为半保守式GC，也叫根上保守（只在根上是无法判断类型）</p>
+<p>为了支持半保守式GC，运行时需要在对象上带有足够的数据源，如果是JVM的话，这些数据可能在类加载器或者对象模型的模块里计算得到，不需要JIT的特别支持。</p>
+<p>可以在直接使用指针来实现引用的条件下支持部分对象的移动，将能直接扫描到的对象设置为不可移动，从他们触发再扫描到的对象就可以移动了</p>
+<p>完全保守的GC通常使用不移动对象的算法，标记-清理，半保守可以使用标记清理，也可以使用其他移动的算法</p>
+<p>半保守对JNI调用的支持比较容易，不管是不是JNI调用，都从栈扫就可以了，但是这部分就和保守式一样，会有疑似指针的问题了。</p>
+<h3 id="准确GC"><a href="#准确GC" class="headerlink" title="准确GC"></a>准确GC</h3><p>要实现准确GC，关键就在要能识别出这块数据是不是指针。</p>
+<p>可以实现的几种方法：</p>
+<ol>
+<li>数据自身带上标记，在JVM中不常见，但是在别的语言中有提现，这种方式在半保守GC中更常见点</li>
+<li>让编译器为方法生成特别的扫描代码，JVM中没有这么实现的</li>
+<li>从外部记录下类型信息，存成映射表。主流JVM的实现都是这样的，==在HotSpot中将这种数据结构成为OopMap==，JRockit中叫做livemap，J9中叫做GCmap。要实现这个功能，需要解释器和JIT编译器都有相应的支持，提供足够的元数据给GC。<h2 id="oopmap是什么"><a href="#oopmap是什么" class="headerlink" title="oopmap是什么"></a>oopmap是什么</h2>使用映射表的一半有两种方式：</li>
+<li>每次都遍历原始的映射表，一个个偏移量扫描，这种用法也叫做 <strong>解释式</strong></li>
+<li>为每个映射表生成一个定制的扫描代码，以后每次要用映射表就直接执行生成的扫描代码，叫做 <strong>编译式</strong></li>
+</ol>
+<p>在HotSpot中，对象的类型里有记录自己的OopMap，记录了在对象的什么偏移量上是什么类型的数据，这些是在类加载的过程中计算得到的。</p>
+<p>每个被JIT编译过后的方法会在一些特定的位置记录下OopMap，记录了执行到该方法的某条指令的时候，栈上和寄存器里哪些位置是引用，这些位置主要在：</p>
+<ol>
+<li>循环的末尾</li>
+<li>方法临返回前/调用方法的call指令后</li>
+<li>可能抛出异常的地方</li>
+</ol>
+<p>这种位置被称为“<strong>安全点</strong>”，之所以选择在一些特定的位置来记录OopMap是因为如果每一条指令都记录OopMap的话，那么记录的数据会很大。选用一些比较关键的点来记录就能有效的缩小需要记录的数据量，但仍然能够达到区分引用的目的。<strong>因此，HotSpot中GC不是在任意位置都可以进入，而只能在safePoint进入，而仍然在解释器中执行的方法则可以通过解释器里的功能自动生成OopMap提供给GC用。</strong></p>
+<p>OopMap平时都是压缩在内存中等到GC需要的时候才解压出来使用，HotSpot是用解释式的方式来使用OopMap，每次都是循环变量里面的项来扫描对应的偏移量。</p>
+<p>对于Java线程中的JNI方法，既不是由JVM的解释器执行的，也不是由JVM的JIT编译期生成的，所以会缺少OopMap信息，<strong>那GC的时候遇到这样的栈帧要怎么保持准确呢？</strong></p>
+<p>HotSpot的解决方法：所有经过JNI调用边界（调用JNI方法传入的参数，从JNI方法传回的参数）的引用都必须用句柄包装起来。JNI调用java api的时候也必须用句柄包装指针，在这种实现里，JNI方法里写的 jobject实际上不是直接指向指针对象的指针，中间有一层句柄。这样在扫描到JNI方法的时候就不需要栈帧了，只需要扫描句柄表就可以从JNI方法中访问到GC堆中的对象了，但是同时这样会有句柄的包装/拆包装的开销，是JNI方法调用比较慢的原因之一。</p>
+<h2 id="怎么进行GC-Roots枚举以及快速枚举"><a href="#怎么进行GC-Roots枚举以及快速枚举" class="headerlink" title="怎么进行GC Roots枚举以及快速枚举"></a>怎么进行GC Roots枚举以及快速枚举</h2><h2 id="minorgc怎么做到不扫描老年代的对象"><a href="#minorgc怎么做到不扫描老年代的对象" class="headerlink" title="minorgc怎么做到不扫描老年代的对象"></a>minorgc怎么做到不扫描老年代的对象</h2><p><strong>通过Remembered Set实现</strong></p>
+<p>假设触发了minorGC，首先枚举根节点，但是根节点的对象可能在新生代中也可能在老年代中，但是我们触发的是minorGC，并不想对老年代的对象进行收集，也就是没有必要去对老年代中的对象进行可达性分析，但是这种情况是有可能会出现的，并且这时候老年代中引用了新生代的对象，新生代的对象是不可以被回收的。</p>
+<p>解决方法是：JVM</p>
+
+    </div>
+    
+    <div class="post-footer">
+        <div>
+            
+            转载声明：
+            商业转载请联系作者获得授权,非商业转载请注明出处 © <a href="" target="_blank">Snippet</a>
+            
+            
+        </div>
+        <div>
+            
+        </div>
+    </div>
+</article>
+<div class="article-nav prev-next-wrap clearfix">
+    
+    <a href="/blog/2019/09/10/线程池源码分析/" class="pre-post btn btn-default" title='线程池全解析'>
+        <i class="fa fa-angle-left fa-fw"></i><span class="hidden-lg">上一篇</span>
+        <span class="hidden-xs">
+            线程池全解析</span>
+    </a>
+    
+    
+</div>
+
+<div id="comments">
+    
+
+<div id="vcomments" class="valine"></div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="/blog/assets/valine.min.js"></script>
+<script>
+new Valine({
+    av: AV,
+    el: '#vcomments',
+    appId: 'xOKV9J4UeQAtVkvnJC7Kq2Jn-gzGzoHsz',
+    appKey: 'erIpQac4azoCmgfBB7Dl9maa',
+    placeholder: '说点什么吧',
+    notify: false,
+    verify: true,
+    avatar: 'mm',
+    meta: 'nick,mail'.split(','),
+    pageSize: '10',
+    path: window.location.pathname,
+    lang: 'en'.toLowerCase()
+})
+</script>
+
+
+</div>
+
+                </main>
+                
+                    <aside id="article-toc" role="navigation" class="col-md-4">
+    <div class="widget">
+        <h3 class="title">
+            Table of Contents
+        </h3>
+        
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#GC大致流程"><span class="toc-text">GC大致流程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#保守gc-半保守gc-准确gc"><span class="toc-text">保守gc 半保守gc 准确gc</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#保守式GC"><span class="toc-text">保守式GC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#半保守GC"><span class="toc-text">半保守GC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#准确GC"><span class="toc-text">准确GC</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#oopmap是什么"><span class="toc-text">oopmap是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#怎么进行GC-Roots枚举以及快速枚举"><span class="toc-text">怎么进行GC Roots枚举以及快速枚举</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#minorgc怎么做到不扫描老年代的对象"><span class="toc-text">minorgc怎么做到不扫描老年代的对象</span></a></li></ol></li></ol>
+        
+    </div>
+</aside>
+                
+            </div>
+        </div>
+    </section>
+    <footer class="main-footer">
+    <div class="container">
+        <div class="row">
+        </div>
+    </div>
+</footer>
+<a id="back-to-top" class="icon-btn hide">
+    <i class="fa fa-chevron-up"></i>
+</a>
+    <div class="copyright">
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="busuanzi">
+    
+</div>
+            </div>
+            <div class="col-sm-12">
+                <span>Copyright &copy;
+                    2017
+                </span> |
+                <span>
+                    Powered by <a href="//hexo.io" class="copyright-links" target="_blank" rel="nofollow">Hexo</a>
+                </span> |
+                <span>
+                    Theme by <a href="//github.com/shenliyang/hexo-theme-snippet.git" class="copyright-links" target="_blank" rel="nofollow">Snippet</a>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script src="/blog/js/app.js?rev=@@hash"></script>
+</body>
+</html>
