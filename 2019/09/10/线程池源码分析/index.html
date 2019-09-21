@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html lang="zh-CN">
 
 <head><meta name="generator" content="Hexo 3.9.0">
     <!--Setting-->
@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-siteapp">
     <meta http-equiv="Cache-Control" content="no-transform">
     <meta name="renderer" content="webkit|ie-comp|ie-stand">
-    <meta name="apple-mobile-web-app-capable" content="Hexo">
+    <meta name="apple-mobile-web-app-capable" content="HY&#39;S BBBBBBBBBLOG">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="format-detection" content="telephone=no,email=no,adress=no">
     <meta name="browsermode" content="application">
@@ -35,10 +35,10 @@
     
     线程池全解析 |
     
-    Hexo
+    HY&#39;S BBBBBBBBBLOG
 </title>
 
-<link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+<link rel="alternate" href="/atom.xml" title="HY&#39;S BBBBBBBBBLOG" type="application/atom+xml">
 
 
 <link rel="icon" href="/favicon.ico">
@@ -75,7 +75,7 @@
     http://snippet.shenliyang.com/img/banner.jpg)"
      >
     <div class="main-header-box">
-        <a class="header-avatar" href="/" title='John Doe'>
+        <a class="header-avatar" href="/" title='HY'>
             <img src="/blog/img/avatar.jpg" alt="logo头像" class="img-responsive center-block">
         </a>
         <div class="branding">
@@ -95,14 +95,14 @@
                         <i class="fa fa-bars"></i>
                     </span>
                     <a class="navbar-brand" href="http://crazy_ll.gitee.io/blog">
-                        Hexo</a>
+                        HY&#39;S BBBBBBBBBLOG</a>
                 </div>
                 <div class="collapse navbar-collapse" id="main-menu">
                     <ul class="menu">
                         
                         <li role="presentation" class="text-center">
                             <a href="/"><i class="fa "></i>
-                                Home</a>
+                                首页</a>
                         </li>
                         
                         <li role="presentation" class="text-center">
@@ -433,7 +433,7 @@ new Valine({
     meta: 'nick,mail'.split(','),
     pageSize: '10',
     path: window.location.pathname,
-    lang: 'en'.toLowerCase()
+    lang: 'zh-CN'.toLowerCase()
 })
 </script>
 
@@ -445,7 +445,7 @@ new Valine({
                     <aside id="article-toc" role="navigation" class="col-md-4">
     <div class="widget">
         <h3 class="title">
-            Table of Contents
+            文章目录
         </h3>
         
         <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#背景"><span class="toc-text">背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#线程池的创建"><span class="toc-text">线程池的创建</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#BlockingQueue"><span class="toc-text">BlockingQueue</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ThreadFactory"><span class="toc-text">ThreadFactory</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RejectExecutionHandler"><span class="toc-text">RejectExecutionHandler</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#AbortPolicy"><span class="toc-text">AbortPolicy</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#CallerRunsPolicy"><span class="toc-text">CallerRunsPolicy</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DiscardOldestPolicy"><span class="toc-text">DiscardOldestPolicy</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DiscardPolicy"><span class="toc-text">DiscardPolicy</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#线程池的执行过程"><span class="toc-text">线程池的执行过程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#ctl"><span class="toc-text">ctl</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#线程池运行状态"><span class="toc-text">线程池运行状态</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#execute-方法分析"><span class="toc-text">execute()方法分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#addWorker-方法分析"><span class="toc-text">addWorker()方法分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#worker类分析"><span class="toc-text">worker类分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#worker-runWorker-方法分析"><span class="toc-text">worker.runWorker()方法分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#getTask-方法分析"><span class="toc-text">getTask()方法分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#processWorkerExit-方法分析"><span class="toc-text">processWorkerExit()方法分析</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#线程池的关闭"><span class="toc-text">线程池的关闭</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#shutdown-方法分析"><span class="toc-text">shutdown()方法分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#interruptIdleWorkers-方法分析"><span class="toc-text">interruptIdleWorkers()方法分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#shutdownNow-方法分析"><span class="toc-text">shutdownNow()方法分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#tryTerminate-方法分析"><span class="toc-text">tryTerminate()方法分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#awaitTermination-方法分析"><span class="toc-text">awaitTermination()方法分析</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#线程池中线程数量的设置"><span class="toc-text">线程池中线程数量的设置</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#《JAVA并发编程实战》中给出的方式"><span class="toc-text">《JAVA并发编程实战》中给出的方式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Amdahl定律"><span class="toc-text">Amdahl定律</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#结尾"><span class="toc-text">结尾</span></a></li></ol>
