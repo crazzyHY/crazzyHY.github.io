@@ -18,6 +18,7 @@
 <ul>
 <li>简单高效（和其他收集器相比），单个CPU来说，没有线程交互的开销，只做垃圾回收自然有最高的单线程收集效率，在Client下，内存不大（百兆），停顿时间在几十毫秒~100多毫秒只要不频繁发生就可以</li>
 </ul>
+<a id="more"></a>
 <h2 id="ParNew"><a href="#ParNew" class="headerlink" title="ParNew"></a>ParNew</h2><p>ParNew是Serial的多线程版本，除了使用多线程之外，其余行为几乎和Serial一致<br><img src="http://py2mk0s3q.bkt.clouddn.com/20190922175031.png" alt></p>
 <p>是运行在Server模式下的虚拟机中的首选新生代垃圾回收器</p>
 <p>其中有个与性能无关但是很重要的原因是，除了Serial以外，ParNew是唯一能和CMS合作的收集器</p>
