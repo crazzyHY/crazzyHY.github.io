@@ -7,25 +7,95 @@
     error: '复制错误',
     noSupport: '浏览器不支持'
   }
-} </script></head><body><canvas class="fireworks"></canvas><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="author-info"><div class="author-info__avatar text-center"><img src="http://py2mk0s3q.bkt.clouddn.com/20190922163207.png"></div><div class="author-info__name text-center">HY</div><div class="author-info__description text-center">代码挖掘机</div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/crazy_ll/archives"><span class="pull-left">文章</span><span class="pull-right">5</span></a><a class="author-info-articles__tags article-meta" href="/crazy_ll/tags"><span class="pull-left">标签</span><span class="pull-right">3</span></a><a class="author-info-articles__categories article-meta" href="/crazy_ll/categories"><span class="pull-left">分类</span><span class="pull-right">3</span></a></div></div></div><nav id="nav" style="background-image: url(http://py2mk0s3q.bkt.clouddn.com/20190922211720.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/crazy_ll/">HY'S BBBBBBBBBLOG</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page" href="/">Home</a><a class="site-page" href="/archives">Archives</a><a class="site-page" href="/tags">Tags</a><a class="site-page" href="/categories">Categories</a></span></div><div id="site-info"><div id="site-title">HY'S BBBBBBBBBLOG</div><div id="site-sub-title">看看别人源码写的！！</div></div></nav><div id="content-outer"><div class="layout" id="content-inner"><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/09/02/线程池源码分析/">线程池全解析</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-09-02</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/java基础/">java基础</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/基础/">基础</a></span><div class="content">背景平时在处理业务的时候，我们通常会使用线程池来进行处理，那我们应该选择什么方式创建线程池，在阿里开发规范中是建议程序员显示的创建ThreadPoolSize，那么线程池应该如何配置？线程在线程池里面是怎么复用的？线程池是怎么运作的？线程池该怎么关闭比较合适？接下来将会从线程池的创建 → 线程池的执 ...</div><a class="more" href="/crazy_ll/2019/09/02/线程池源码分析/#more" style="margin-top: 14px">阅读更多</a><hr></div><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/08/25/GC具体过程/">GC过程详解(OopMap,RememberSet)</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-08-25</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/JVM/">JVM</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/GC/">GC</a></span><div class="content">
+} </script></head><body><canvas class="fireworks"></canvas><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="author-info"><div class="author-info__avatar text-center"><img src="http://py2mk0s3q.bkt.clouddn.com/20190922163207.png"></div><div class="author-info__name text-center">HY</div><div class="author-info__description text-center">代码挖掘机</div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/crazy_ll/archives"><span class="pull-left">文章</span><span class="pull-right">5</span></a><a class="author-info-articles__tags article-meta" href="/crazy_ll/tags"><span class="pull-left">标签</span><span class="pull-right">3</span></a><a class="author-info-articles__categories article-meta" href="/crazy_ll/categories"><span class="pull-left">分类</span><span class="pull-right">3</span></a></div></div></div><nav id="nav" style="background-image: url(http://py2mk0s3q.bkt.clouddn.com/20190922211720.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/crazy_ll/">HY'S BBBBBBBBBLOG</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page" href="/">��ҳ</a><a class="site-page" href="/archives">�鵵</a><a class="site-page" href="/tags">��ǩ</a><a class="site-page" href="/categories">����</a></span></div><div id="site-info"><div id="site-title">HY'S BBBBBBBBBLOG</div><div id="site-sub-title">看看别人源码写的！！</div></div></nav><div id="content-outer"><div class="layout" id="content-inner"><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/09/02/线程池源码分析/">线程池全解析</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-09-02</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/java基础/">java基础</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/基础/">基础</a></span><div class="content">背景平时在处理业务的时候，我们通常会使用线程池来进行处理，那我们应该选择什么方式创建线程池，在阿里开发规范中是建议程序员显示的创建ThreadPoolSize，那么线程池应该如何配置？线程在线程池里面是怎么复用的？线程池是怎么运作的？线程池该怎么关闭比较合适？接下来将会从线程池的创建 → 线程池的执行过程 →  线程池的关闭 →  线程池的参数如何设定这几个方面来解析线程池
+线程池的创建创建无非就是new一个对象，那么传入的参数的设置就很重要，我们需要知道要设置什么样的参数来完成任务
+
+所以带着问题来看线程池的构造方法
+线程池中的参数有哪些？
+这些参数分别是什么意思？
+参数的作用是什么？
+
+
+在Executors里面，有4个已经设计好的线程池实现方法：
+
+==newCachedThreadPool==
+
+
+
+==newFixedThreadPool==
+
+
+
+==newSingleThreadExecutor==
+
+
+
+==newScheduledThreadPool==
+
+
+
+
+最后一个newScheduledThreadPool调用了super的构造方法，看这个类继承关系，依旧是ThreadPoolExecutor，那么上述就是源码提供的一些创建线程池的方法，这些方法都是调用了ThreadPoolExecutor的构造方法，仅仅只是在方法参数上做了改变，那么我们要了解线程池就需 ...</div><a class="more" href="/crazy_ll/2019/09/02/线程池源码分析/#more" style="margin-top: 14px">阅读更多</a><hr></div><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/08/25/GC具体过程/">GC过程详解(OopMap,RememberSet)</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-08-25</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/JVM/">JVM</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/GC/">GC</a></span><div class="content">
 
 在了解G1收集器的时候，看到书中描述
 
-分成多个Region区域的难点：Region不可能孤立。一个对象分配在某个Region中，会被堆中任意的对象发生引用关系。在判断可达性确定对象是否存活的时候，那就得需要扫描整个Java堆。这个问题不是只在G1中才有，只是在G1中更加突出。在之前的分代收集中 ...</div><a class="more" href="/crazy_ll/2019/08/25/GC具体过程/#more" style="margin-top: 14px">阅读更多</a><hr></div><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/08/24/垃圾收集器/">垃圾收集器详解</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-08-24</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/java基础/">java基础</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/GC/">GC</a><span class="article-meta__link">-</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/基础/">基础</a></span><div class="content">垃圾收集器图中有7种收集器，收集器之间存在连线说明可以搭配使用，所处位置标明了是新生代还是老年代的收集器，没有最好的收集器出现，只有最合适的（到目前为止）
+分成多个Region区域的难点：Region不可能孤立。一个对象分配在某个Region中，会被堆中任意的对象发生引用关系。在判断可达性确定对象是否存活的时候，那就得需要扫描整个Java堆。这个问题不是只在G1中才有，只是在G1中更加突出。在之前的分代收集中，新生代一半比老年代小许多，新生代的收集也比老年代的频繁，回收新生代的对象也面临相同的问题，如果回收新生代也要扫描老年代的话，Minor GC的效率可能会下降不少。(在gc的时候会去扫全堆，但是通过后面的Remembered Set来避免了扫全堆)
+
+那么就有了疑问
+
+这个Remembered Set是什么？
+确定对象是否存活不是通过GC Roots来分析调用链么，为什么会有扫描堆的概念？
+这个扫描堆和GC Roots的关系是什么？
+具体的GC过程是什么样子的？
+分代收集如何避免扫描不需要收集的区域？
+
+GC大致流程假如触发了Minor GC，这时候需要对新生代的对象进行复制，复制的前提是要知道哪些对象需要被回收，所以在这之前会对新生代的对象做可达性分析，可达性分析不是随时都可以进行的，需要等待程序运行到安全点才行，可达性分析是通过枚举GC Roots，如果没有引用到达这个对象的话，那么就会被判断为可回收，jvm真正清理一个对象需要进行两次标记（第一次标记并且筛选出实现了finalize ...</div><a class="more" href="/crazy_ll/2019/08/25/GC具体过程/#more" style="margin-top: 14px">阅读更多</a><hr></div><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/08/24/垃圾收集器/">垃圾收集器详解</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-08-24</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/java基础/">java基础</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/GC/">GC</a><span class="article-meta__link">-</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/基础/">基础</a></span><div class="content">垃圾收集器图中有7种收集器，收集器之间存在连线说明可以搭配使用，所处位置标明了是新生代还是老年代的收集器，没有最好的收集器出现，只有最合适的（到目前为止）
 
 Serial收集器单线程，只会使用一个CPU或者一个收集线程去完成垃圾收集工作进行垃圾收集的时候，必须要暂停其他所有的工作线程直到结束
-这是s ...</div><a class="more" href="/crazy_ll/2019/08/24/垃圾收集器/#more" style="margin-top: 14px">阅读更多</a><hr></div><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/07/20/Redis持久化方式/">Redis持久化方式</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-07-20</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/Redis/">Redis</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/Redis/">Redis</a></span><div class="content">持久化种类由于redis的数据是存储在内存中，为了保证可靠性，防止数据在redis宕机的时候全部丢失，所以有redis的持久化机制。redis的持久化有两种：
+这是serial收集器的大致工作流程
+书中比喻：“你妈妈在给你打扫房间的时候， 肯定也会让你老老实实地在椅子上或者房间外待着， 如果她一边打扫， 你一边乱扔纸屑， 这房间还能打扫完？”
+从  Serial  -&gt; Parallel  -&gt; Concurrent Mark Sweep(CMS) -&gt; Garbage First (G1,最前沿成果)，仍然没有办法完全消除用户线程的停顿时间（不包括RTSJ中的收集器）
+Serial仍然是虚拟机运行在Client下的默认新生代收集器（JVM有两种运行模式Server与Client），64位下只有Server模式
+优点：
+
+简单高效（和其他收集器相比），单个CPU来说，没有线程交互的开销，只做垃圾回收自然有最高的单线程收集效率，在Client下，内存不大（百兆），停顿时间在几十毫秒~100多毫秒只要不频繁发生就可以
+
+ParNewParNew是Serial的多线程版本，除了使用多线程之外，其余行为几乎和Serial一致
+是运行在Ser ...</div><a class="more" href="/crazy_ll/2019/08/24/垃圾收集器/#more" style="margin-top: 14px">阅读更多</a><hr></div><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/07/20/Redis持久化方式/">Redis持久化方式</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-07-20</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/Redis/">Redis</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/Redis/">Redis</a></span><div class="content">持久化种类由于redis的数据是存储在内存中，为了保证可靠性，防止数据在redis宕机的时候全部丢失，所以有redis的持久化机制。redis的持久化有两种：
 
 RDB（Redis Data Base）
 AOF（Append Only File）
 
-RDB（Redis Data Base）对某个时间 ...</div><a class="more" href="/crazy_ll/2019/07/20/Redis持久化方式/#more" style="margin-top: 14px">阅读更多</a><hr></div><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/07/14/Redis过期策略和内存淘汰/">Redis过期策略和内存淘汰</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-07-14</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/Redis/">Redis</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/Redis/">Redis</a></span><div class="content">过期策略过期策略的实现有两种：
+RDB（Redis Data Base）对某个时间点的一次全量数据备份，是二进制的文件，在存储上很紧凑。
+RDB的触发机制：
+
+手动触发
+自动触发
+
+手动触发通过命令save来触发RDB快照，save命令有同步和异步
+save命令：会阻塞当前服务器，直到RDB全部完成，如果redis数据量很大的话会造成长时间的阻塞。
+bgsave命令：执行该命令主进程会fork出一个子进程来完成RDB的过程，完成后自动结束，其中使用了操作系统的多进程Copy On Write，由于fork子进程是一个重量级的操作，所以在for的过程会导致阻塞，但是阻塞的时间比save短很多。
+触发方式
+save命令的配置：save   在seconds时间内触发了changes次的操作会触发bgsave
+执行shutdown停止服务器的时候，如果没有开启AOF，会自动执行一次bgsave
+主从同步：当slaver连接到master的时候，会发送SYNC，master会执行bgsave，并将该时间段下的写操作全部缓存记录下来，等全量备份完成后向slaver发送RDB，s ...</div><a class="more" href="/crazy_ll/2019/07/20/Redis持久化方式/#more" style="margin-top: 14px">阅读更多</a><hr></div><div class="recent-post-item article-container"><a class="article-title" href="/crazy_ll/2019/07/14/Redis过期策略和内存淘汰/">Redis过期策略和内存淘汰</a><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-07-14</time><span class="article-meta"><span class="article-meta__separator">|</span><i class="fa fa-inbox article-meta__icon" aria-hidden="true"></i><a class="article-meta__categories" href="/crazy_ll/categories/Redis/">Redis</a></span><span class="article-meta tags"><span class="article-meta__separator">|</span><i class="fa fa-tag article-meta__icon" aria-hidden="true"></i><a class="article-meta__tags" href="/crazy_ll/tags/Redis/">Redis</a></span><div class="content">过期策略过期策略的实现有两种：
 
 定期删除
 惰性删除
 
 定期删除redis每隔100ms会从设置了超时时间的key中随机抽取一部分来检查是否过期，过期就删除，如果有多余25%的key被删除就重复这个过程
-惰性删除定期删除可能会导致大部分的key在过期之后没有被删除，所以出现了惰性删除，惰性删除是在查 ...</div><a class="more" href="/crazy_ll/2019/07/14/Redis过期策略和内存淘汰/#more" style="margin-top: 14px">阅读更多</a><hr></div><nav id="pagination"><div class="pagination"><span class="page-number current">1</span></div></nav></div></div><footer class="footer-bg" style="background-image: url(http://py2mk0s3q.bkt.clouddn.com/20190922211720.jpg)"><div class="layout" id="footer"><div class="copyright">&copy;2018 - 2019 By HY</div><div class="framework-info"><span>驱动 - </span><a href="https://learncode.com.cn"><span>HYY</span></a><span class="footer-separator">|</span><span>主题 - </span><a href="https://learncode.com.cn"><span>HH</span></a></div><div class="footer_custom_text">welcome</div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span><span></span></span><span class="footer-separator">|</span><span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/crazy_ll/js/utils.js?version=1.6.1"></script><script src="/crazy_ll/js/fancybox.js?version=1.6.1"></script><script src="/crazy_ll/js/sidebar.js?version=1.6.1"></script><script src="/crazy_ll/js/copy.js?version=1.6.1"></script><script src="/crazy_ll/js/fireworks.js?version=1.6.1"></script><script src="/crazy_ll/js/transition.js?version=1.6.1"></script><script src="/crazy_ll/js/scroll.js?version=1.6.1"></script><script src="/crazy_ll/js/head.js?version=1.6.1"></script><script>if(/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
+惰性删除定期删除可能会导致大部分的key在过期之后没有被删除，所以出现了惰性删除，惰性删除是在查询在key的时候，判断是否过期，如果过期就删除
+内存淘汰机制reids通过定期删除和惰性删除仍然会导致有大部分的key在过期之后没有被删除，如果不采取其他操作会导致内存溢出，所以当内存容量到达上限或者配置的maxmemory的时候就会触发内存淘汰机制
+内存淘汰机制一共有6种
+
+noeviction：内存到达限制并且客户端尝试去执行需要占用过多内存的命令时返回错误
+allKeys-lru：回收最少使用的key（lru：最近最少使用算法）
+volatile-lru：回收设置了过期时间的key，使用lru
+allKeys-random：随机删除key
+volatile-random：对有设置了过期时间的key进行随机删除
+volatile-ttl：对设置了过期时间的key按照最短存活时间进行删除
+
+</div><a class="more" href="/crazy_ll/2019/07/14/Redis过期策略和内存淘汰/#more" style="margin-top: 14px">阅读更多</a><hr></div><nav id="pagination"><div class="pagination"><span class="page-number current">1</span></div></nav></div></div><footer class="footer-bg" style="background-image: url(http://py2mk0s3q.bkt.clouddn.com/20190922211720.jpg)"><div class="layout" id="footer"><div class="copyright">&copy;2018 - 2019 By HY</div><div class="framework-info"><span>驱动 - </span><a href="https://learncode.com.cn"><span>HYY</span></a><span class="footer-separator">|</span><span>主题 - </span><a href="https://learncode.com.cn"><span>HH</span></a></div><div class="footer_custom_text">welcome</div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span><span></span></span><span class="footer-separator">|</span><span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/crazy_ll/js/utils.js?version=1.6.1"></script><script src="/crazy_ll/js/fancybox.js?version=1.6.1"></script><script src="/crazy_ll/js/sidebar.js?version=1.6.1"></script><script src="/crazy_ll/js/copy.js?version=1.6.1"></script><script src="/crazy_ll/js/fireworks.js?version=1.6.1"></script><script src="/crazy_ll/js/transition.js?version=1.6.1"></script><script src="/crazy_ll/js/scroll.js?version=1.6.1"></script><script src="/crazy_ll/js/head.js?version=1.6.1"></script><script>if(/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
   $('#nav').addClass('is-mobile')
   $('footer').addClass('is-mobile')
 }</script></body></html>
