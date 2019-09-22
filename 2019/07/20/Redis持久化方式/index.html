@@ -1,0 +1,78 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta name="generator" content="Hexo 3.9.0"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta name="description" content="Redis持久化方式"><meta name="keywords" content="Redis"><meta name="author" content="HY"><meta name="copyright" content="HY"><title>Redis持久化方式 | HY'S BBBBBBBBBLOG</title><link rel="shortcut icon" href="/crazy_ll/melody-favicon.ico"><link rel="stylesheet" href="/crazy_ll/css/index.css?version=1.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@latest/css/font-awesome.min.css?version=1.6.1"><link rel="dns-prefetch" href="https://cdn.staticfile.org"><link rel="dns-prefetch" href="https://cdn.bootcss.com"><link rel="dns-prefetch" href="https://creativecommons.org"><script>var GLOBAL_CONFIG = { 
+  root: '/crazy_ll/',
+  algolia: undefined,
+  localSearch: undefined,
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  }
+} </script></head><body><canvas class="fireworks"></canvas><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="toggle-sidebar-info text-center"><span data-toggle="切换文章详情">切换站点概览</span><hr></div><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar"></div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#持久化种类"><span class="toc-number">1.</span> <span class="toc-text">持久化种类</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#RDB（Redis-Data-Base）"><span class="toc-number">1.1.</span> <span class="toc-text">RDB（Redis Data Base）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#手动触发"><span class="toc-number">1.1.1.</span> <span class="toc-text">手动触发</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#触发方式"><span class="toc-number">1.1.2.</span> <span class="toc-text">触发方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#执行流程"><span class="toc-number">1.1.3.</span> <span class="toc-text">执行流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RDB优缺点"><span class="toc-number">1.1.4.</span> <span class="toc-text">RDB优缺点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#AOF-Append-Only-File"><span class="toc-number">1.2.</span> <span class="toc-text">AOF(Append Only File)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#配置信息"><span class="toc-number">1.2.1.</span> <span class="toc-text">配置信息</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#AOF重写机制"><span class="toc-number">1.2.2.</span> <span class="toc-text">AOF重写机制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#AOF优缺点"><span class="toc-number">1.2.3.</span> <span class="toc-text">AOF优缺点</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#一般的持久化策略"><span class="toc-number">2.</span> <span class="toc-text">一般的持久化策略</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么是绝大部分场景"><span class="toc-number">2.1.</span> <span class="toc-text">为什么是绝大部分场景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么这样做"><span class="toc-number">2.2.</span> <span class="toc-text">为什么这样做</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#RDB持久化"><span class="toc-number">2.2.1.</span> <span class="toc-text">RDB持久化</span></a></li></ol></li></ol></li></ol></div></div><div class="author-info hide"><div class="author-info__avatar text-center"><img src="http://py2mk0s3q.bkt.clouddn.com/20190922163207.png"></div><div class="author-info__name text-center">HY</div><div class="author-info__description text-center">代码挖掘机</div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/crazy_ll/archives"><span class="pull-left">文章</span><span class="pull-right">4</span></a><a class="author-info-articles__tags article-meta" href="/crazy_ll/tags"><span class="pull-left">标签</span><span class="pull-right">3</span></a><a class="author-info-articles__categories article-meta" href="/crazy_ll/categories"><span class="pull-left">分类</span><span class="pull-right">3</span></a></div></div></div><div id="content-outer"><div id="top-container" style="background-image: url(http://py2mk0s3q.bkt.clouddn.com/20190922204411.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/crazy_ll/">HY'S BBBBBBBBBLOG</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page" href="/">Home</a><a class="site-page" href="/archives">Archives</a><a class="site-page" href="/tags">Tags</a><a class="site-page" href="/categories">Categories</a></span></div><div id="post-info"><div id="post-title">Redis持久化方式</div><div id="post-meta"><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-07-20</time><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/crazy_ll/categories/Redis/">Redis</a></div></div></div><div class="layout" id="content-inner"><article id="post"><div class="article-container" id="post-content"><h1 id="持久化种类"><a href="#持久化种类" class="headerlink" title="持久化种类"></a>持久化种类</h1><p>由于redis的数据是存储在内存中，为了保证可靠性，防止数据在redis宕机的时候全部丢失，所以有redis的持久化机制。<br>redis的持久化有两种：</p>
+<ul>
+<li><strong>RDB</strong>（Redis Data Base）</li>
+<li><strong>AOF</strong>（Append Only File）</li>
+</ul>
+<h2 id="RDB（Redis-Data-Base）"><a href="#RDB（Redis-Data-Base）" class="headerlink" title="RDB（Redis Data Base）"></a>RDB（Redis Data Base）</h2><p>对某个时间点的一次全量数据备份，是二进制的文件，在存储上很紧凑。</p>
+<p>RDB的触发机制：</p>
+<ul>
+<li>手动触发</li>
+<li>自动触发</li>
+</ul>
+<h3 id="手动触发"><a href="#手动触发" class="headerlink" title="手动触发"></a>手动触发</h3><p>通过命令save来触发RDB快照，save命令有同步和异步</p>
+<p>save命令：会阻塞当前服务器，直到RDB全部完成，如果redis数据量很大的话会造成长时间的阻塞。</p>
+<p>bgsave命令：执行该命令主进程会fork出一个子进程来完成RDB的过程，完成后自动结束，其中使用了操作系统的多进程Copy On Write，由于fork子进程是一个重量级的操作，所以在for的过程会导致阻塞，但是阻塞的时间比save短很多。</p>
+<h3 id="触发方式"><a href="#触发方式" class="headerlink" title="触发方式"></a>触发方式</h3><ol>
+<li>save命令的配置：save <seconds> <changes> 在seconds时间内触发了changes次的操作会触发bgsave</changes></seconds></li>
+<li>执行shutdown停止服务器的时候，如果没有开启AOF，会自动执行一次bgsave</li>
+<li>主从同步：当slaver连接到master的时候，会发送SYNC，master会执行bgsave，并将该时间段下的写操作全部缓存记录下来，等全量备份完成后向slaver发送RDB，slaver会丢弃之前所有的旧数据，加载当前RDB，在master发送完RDB的时候会发送缓存的写命令，slaver接受命令同步数据</li>
+</ol>
+<h3 id="执行流程"><a href="#执行流程" class="headerlink" title="执行流程"></a>执行流程</h3><ol>
+<li>执行bgsave的时候，redis会检查是否有子进程在执行RDB/AOF持久化任务，有的话直接返回</li>
+<li>如果没有的话，redis会fork一个子进程来执行RDB操作，fork会对主进程造成阻塞，影响redis的读写，fork完成后会发送消息给主进程，不再阻塞主进程（阻塞仅是fork子进程的过程，后续进程执行操作不会阻塞）</li>
+<li>RDB子进程会根据redis主进程的内存生成临时的快照文件，持久化完成后会使用临时快照替换原来的RDB，这个过程中，主进程的读写不受到影响，但是redis的写操作不会同步到主进程的主内存中，而是会写到一个临时的内存区域作为一个副本</li>
+<li>子进程完成RDB后发消息给主进程，通知RDB完成，将内存副本中的增量写数据同步到主内存</li>
+</ol>
+<h3 id="RDB优缺点"><a href="#RDB优缺点" class="headerlink" title="RDB优缺点"></a>RDB优缺点</h3><p>优点：</p>
+<ol>
+<li>文件小，非常适合定时备份，灾难恢复</li>
+<li>加载RDB比AOF来的快，因为RDB记录的是实际的数据，AOF则是需要重放的命令<br>缺点：</li>
+<li>无法做到实时持久化，会丢失两次RDB之间的数据</li>
+<li>fork子进程属于重量级操作，会阻塞主进程</li>
+<li>RDB文件格式存在新老版本不兼容的情况</li>
+</ol>
+<h2 id="AOF-Append-Only-File"><a href="#AOF-Append-Only-File" class="headerlink" title="AOF(Append Only File)"></a>AOF(Append Only File)</h2><p>AOF日志是增量的备份，基于写命令存储的文本文件，AOF会持续不断的增大，当redis重启的时候会根据AOF进行恢复，如果AOF文件过大，那么恢复时间会很长，所以需要定期重写AOF，减小AOF的大小（毕竟是不断的顺序写，数据量只会增多）</p>
+<p>AOF默认关闭，需要配置开启</p>
+<h3 id="配置信息"><a href="#配置信息" class="headerlink" title="配置信息"></a>配置信息</h3><blockquote>
+<p>##此选项为aof功能的开关，默认为“no”，可以通过“yes”来开启aof功能  </p>
+</blockquote>
+<p>##只有在“yes”下，aof重写/文件同步等特性才会生效<br>appendonly yes  </p>
+<p>##指定aof文件名称<br>appendfilename appendonly.aof  </p>
+<p>##指定aof操作中文件同步策略，有三个合法值：always，everysec，no,默认为everysec<br>appendfsync everysec  </p>
+<p>##在aof-rewrite期间，appendfsync是否暂缓文件同步，”no”表示“不暂缓”，“yes”表示“暂缓”，默认为“no”<br>no-appendfsync-on-rewrite no  </p>
+<p>##aof文件rewrite触发的最小文件尺寸(mb,gb),只有大于此aof文件大于此尺寸是才会触发rewrite，默认“64mb”，建议“512mb”<br>auto-aof-rewrite-min-size 64mb  </p>
+<p>##相对于“上一次”rewrite，本次rewrite触发时aof文件应该增长的百分比  </p>
+<p>##每一次rewrite之后，redis都会记录下此时“新aof”文件的大小(例如A)</p>
+<p>##aof文件增长到A*(1 + p)之后，触发下一次rewrite，每一次aof记录的添加，都会检测当前aof文件的尺寸。<br>auto-aof-rewrite-percentage 100</p>
+<p>AOF是在文件中添加写命令，对于操作密集的server会造成io的压力，linux也有延迟写入的手段，每次写都是在buffer中操作，当buffer数据到达一定值的时候才会触发实际写入</p>
+<p>always：每一条AOF记录都立即同步到文件，性能很低，但是较为安全<br>everysec：每秒同步一次，性能和安全都比较中庸的方式，也是redis推荐的方式，如果遇到物理故障，可能导致最多1秒的AOF记录丢失<br>no：redis永不直接调用文件同步，而是让操作系统来决定什么时候同步磁盘，性能较好，但是不安全</p>
+<h3 id="AOF重写机制"><a href="#AOF重写机制" class="headerlink" title="AOF重写机制"></a>AOF重写机制</h3><p>重写并不是基于原AOF重写，而是全量遍历内存中数据，逐个序列化到AOF中，在重写的过程中，所有的写命令（触发了AOF过程中的写命令）也会被记录到原AOF，同时也会在新的AOF完成之后添加进去，在全部都完成之后会重新命名并替换原AOF文件。</p>
+<h3 id="AOF优缺点"><a href="#AOF优缺点" class="headerlink" title="AOF优缺点"></a>AOF优缺点</h3><p>优点：</p>
+<ol>
+<li>只需要追加，所以速度快，消耗的内存低<br>缺点：</li>
+<li>AOF会过大，需要定期瘦身</li>
+<li>由于是命令重放，所以恢复速度比RDB慢</li>
+<li>文件比RDB大</li>
+</ol>
+<h1 id="一般的持久化策略"><a href="#一般的持久化策略" class="headerlink" title="一般的持久化策略"></a>一般的持久化策略</h1><ul>
+<li>master关闭持久化</li>
+<li>slaver开启RDB，必要的时候AOF和RDB都开启</li>
+</ul>
+<p>该策略适应于大部分场景，绝大部分集群</p>
+<h2 id="为什么是绝大部分场景"><a href="#为什么是绝大部分场景" class="headerlink" title="为什么是绝大部分场景"></a>为什么是绝大部分场景</h2><p>这种设置存在的部分的数据丢失的可能性，redis的主从复制是异步的，master执行客户端请求的命令会立即返回给呵护短，然后通过异步的方式同步给slaver，因此可能在数据还没有同步给slaver的时候就宕机了，然后slaver变成了master，那么数据就丢失了。</p>
+<p>绝大部分场景都可以容忍部分数据的丢失。</p>
+<h2 id="为什么这样做"><a href="#为什么这样做" class="headerlink" title="为什么这样做"></a>为什么这样做</h2><p>无论哪种方式都会影响redis的性能，导致redis线程阻塞，为了保证最佳性能，将master的持久化关闭</p>
+<h3 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h3><p>AOF和RDB，优先使用AOF<br>如果开启了AOF，那么一定会优先使用AOF去恢复，即使AOF文件不存在，就会创建一个空的AOF文件</p>
+</div></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">HY</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://gitee.com/crazy_ll/crazy_ll/2019/07/20/Redis持久化方式/">https://gitee.com/crazy_ll/crazy_ll/2019/07/20/Redis持久化方式/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://gitee.com/crazy_ll/crazy_ll">HY'S BBBBBBBBBLOG</a>！</span></div></div><div class="post-meta__tag-list"><a class="post-meta__tags" href="/crazy_ll/tags/Redis/">Redis</a></div><nav id="pagination"><div class="prev-post pull-left"><a href="/crazy_ll/2019/08/24/垃圾收集器/"><i class="fa fa-chevron-left">  </i><span>垃圾收集器详解</span></a></div></nav></div></div><footer class="footer-bg" style="background-image: url(http://py2mk0s3q.bkt.clouddn.com/20190922204411.jpg)"><div class="layout" id="footer"><div class="copyright">&copy;2018 - 2019 By HY</div><div class="framework-info"><span>驱动 - </span><a href="https://learncode.com.cn"><span>HYY</span></a><span class="footer-separator">|</span><span>主题 - </span><a href="https://learncode.com.cn"><span>HH</span></a></div><div class="footer_custom_text">welcome</div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_page_pv"><i class="fa fa-file-o"></i><span id="busuanzi_value_page_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/crazy_ll/js/utils.js?version=1.6.1"></script><script src="/crazy_ll/js/fancybox.js?version=1.6.1"></script><script src="/crazy_ll/js/sidebar.js?version=1.6.1"></script><script src="/crazy_ll/js/copy.js?version=1.6.1"></script><script src="/crazy_ll/js/fireworks.js?version=1.6.1"></script><script src="/crazy_ll/js/transition.js?version=1.6.1"></script><script src="/crazy_ll/js/scroll.js?version=1.6.1"></script><script src="/crazy_ll/js/head.js?version=1.6.1"></script><script>if(/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
+  $('#nav').addClass('is-mobile')
+  $('footer').addClass('is-mobile')
+}</script></body></html>
