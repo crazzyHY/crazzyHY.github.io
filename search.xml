@@ -4,6 +4,31 @@
   
     
     <entry>
+      <title>MySQL基础知识</title>
+      <link href="/crazy_ll/2019/09/27/mysql%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/"/>
+      <url>/crazy_ll/2019/09/27/mysql%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/</url>
+      
+        <content type="html"><![CDATA[<h1 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h1><h2 id="mysql架构"><a href="#mysql架构" class="headerlink" title="mysql架构"></a>mysql架构</h2><p><img src="http://py2mk0s3q.bkt.clouddn.com/20190927153217.png" alt></p><a id="more"></a><ol><li><font color="red" size="3"><code>处理连接</code></font>：客户端通过<font color="red" size="3"><code>TCP/IP</code></font>，<font color="red" size="3"><code>命名管道或内存</code></font>，<font color="red" size="3"><code>Unix域套接字</code></font>来和服务器建立连接</li><li><font color="red" size="3"><code>查询缓存</code></font>：缓存在处理某些系统函数等不会命中缓存，缓存需要额外的开销来处理，所以5.7.20开始不推荐使用缓存，在8.0中将缓存删除</li><li><font color="red" size="3"><code>语法解析</code></font>：由于传的只是一段文本，所以mysql会对文本做分析，判断语法是否正确，并且把将要查询的表，还有各种查询条件都提取放到mysql内部使用的一些数据结构上</li><li><font color="red" size="3"><code>查询优化</code></font>：会对语句进行一些优化，优化的结果就是生成一个执行计划</li><li><font color="red" size="3"><code>存储引擎</code></font>：mysql把数据的存储和提取都封装到了<font color="red" size="3"><code>存储引擎</code></font>中，表的存储，怎么读取，写入都是<font color="red" size="3"><code>存储引擎</code></font>负责，不同的引擎存储的方式不同，采取的存储算法也可能不同</li></ol><h2 id="字符"><a href="#字符" class="headerlink" title="字符"></a>字符</h2><ol><li><p>mysql数据库，表，列都可以有自己的字符集和比较规则，CHARACTER SET，COLLATE。<br>字符集的记录字节长度不同</p><ul><li><font color="red" size="3"><code>ASCII</code></font> 128个字符 1个字节</li><li><font color="red" size="3"><code>GB2312</code></font> 汉字加其他 如果字符在ASCII中则是一个字节，否则就是2个字节</li><li><font color="red" size="3"><code>GBK</code></font> 在上一个字符集的基础上做了扩充</li><li><font color="red" size="3"><code>utf8</code></font> 收录了几乎所有的字符，并且在不断扩充，可变长编码，长度为1~4个字节</li></ul></li><li><p>上面的这些都可以在配置文件中修改，<font color="red" size="3"><code>my.cnf</code></font>文件 </p></li><li><p>比较规则会影响到排序的结果，所以对某个字符串列作排序的时候没有得到想象中的结果应该要考虑字符集的<font color="red" size="3"><code>比较规则</code></font>配置的是什么</p></li><li><p>如果列的字符集没有定义，则默认使用表的字符集；如果表的字符集没有定义，则使用数据库的字符集；如果数据库的字符集没有定义，则使用服务器级别的字符集</p></li><li><p>从客户端到mysql到返回，总共定义了3个字符集，这里就直接复制了</p><table><thead><tr><th><strong>系统变量</strong></th><th><strong>描述</strong></th></tr></thead><tbody><tr><td>character_set_client</td><td>服务器解码请求时使用的字符集</td></tr><tr><td>character_set_connection</td><td>服务器处理请求时会把请求字符串从<code>character_set_client</code>转为<code>character_set_connection</code></td></tr><tr><td>character_set_results</td><td>服务器向客户端返回数据时使用的字符集</td></tr></tbody></table><p>一般设置为相同的字符集避免转换</p></li></ol>]]></content>
+      
+      
+      <categories>
+          
+          <category> MySQL </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 基础 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>并发基石AQS的秘密</title>
       <link href="/crazy_ll/2019/09/23/%E5%B9%B6%E5%8F%91%E5%9F%BA%E7%9F%B3AQS%E7%9A%84%E7%A7%98%E5%AF%86/"/>
       <url>/crazy_ll/2019/09/23/%E5%B9%B6%E5%8F%91%E5%9F%BA%E7%9F%B3AQS%E7%9A%84%E7%A7%98%E5%AF%86/</url>
@@ -120,9 +145,9 @@
       
         <tags>
             
-            <tag> GC </tag>
-            
             <tag> 基础 </tag>
+            
+            <tag> GC </tag>
             
         </tags>
       
