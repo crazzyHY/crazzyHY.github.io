@@ -4,6 +4,31 @@
   
     
     <entry>
+      <title>InnoDB数据页结构</title>
+      <link href="/crazy_ll/2019/09/28/InnoDB%E6%95%B0%E6%8D%AE%E9%A1%B5%E7%BB%93%E6%9E%84/"/>
+      <url>/crazy_ll/2019/09/28/InnoDB%E6%95%B0%E6%8D%AE%E9%A1%B5%E7%BB%93%E6%9E%84/</url>
+      
+        <content type="html"><![CDATA[<h1 id="数据页结构"><a href="#数据页结构" class="headerlink" title="数据页结构"></a>数据页结构</h1><p>InnoDB在不同的目的下设计了许多不同的 <code>页</code></p><p>其中存放记录的叫做 <code>数据页</code></p><h2 id="页的结构图"><a href="#页的结构图" class="headerlink" title="页的结构图"></a>页的结构图</h2><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191009221736.png" alt></p><p>所有页都有 <code>File Header</code> <code>File Trailer</code> </p><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191009221753.png" alt></p><h2 id="Page-Directory"><a href="#Page-Directory" class="headerlink" title="Page Directory"></a>Page Directory</h2><p>这个是页内快速查找所需数据的方式，就好像书本的目录，对主要章节记录了页数，<code>Page Directory</code>也是类似的功能，样子就像下图</p><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191009222542.png" alt></p><p>由于页中的用户数据是一个单链表，在查找页中所需要的数据，比如<code>主键=8</code>，就只能通过遍历这个链表来找到这条数据，为了提高效率，就通过<code>槽(slot)</code>来实现快速查找。</p><p>这个槽其实就是一条数据，从图里也能看出来 </p><p>就是通过将数据进行分组，然后将每一组（除了最小的）最大的数据作为一个槽</p><p>InnoDB中这个分组是有规定的</p><ul><li>对于最小记录所在的分组只能有 <strong><em>1</em></strong> 条记录，最大记录所在的分组拥有的记录条数只能在 <strong><em>1~8</em></strong> 条之间，剩下的分组中记录的条数范围只能在是 <strong><em>4~8</em></strong> 条之间</li></ul><h2 id="File-Header"><a href="#File-Header" class="headerlink" title="File Header"></a>File Header</h2><p>页和页之间是通过这个<code>File Header</code>中记录上一页的页号和下一页的页号来形成一个双链表，不过并不是所有类型的页都有上下页的属性，数据页是有的</p><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191009225234.png" alt></p><p>在Header中还有一个数据：<code>FIL_PAGE_SPACE_OR_CHKSUM</code>代表当前这个页的校验和</p><h2 id="File-Trailer"><a href="#File-Trailer" class="headerlink" title="File Trailer"></a>File Trailer</h2><p>数据写入mysql，是在内存中修改完页中的内容后再写入磁盘，如果这时候出现问题导致磁盘写入失败，该怎么办</p><p>所以在<code>File Trailer</code>中，前4个字节代表的也是校验和，这个和<code>Header</code>中的校验和是一致的，因为写磁盘的时候，<code>Header</code>的校验和会先同步到磁盘，这时候如果出现断电等问题，那么头尾校验和就不一致</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> MySQL </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 基础 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>InnoDB的存储结构</title>
       <link href="/crazy_ll/2019/09/28/InnoDB%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84/"/>
       <url>/crazy_ll/2019/09/28/InnoDB%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84/</url>
@@ -170,9 +195,9 @@
       
         <tags>
             
-            <tag> 基础 </tag>
-            
             <tag> GC </tag>
+            
+            <tag> 基础 </tag>
             
         </tags>
       
