@@ -5,6 +5,106 @@
     
     <entry>
       <title>InnoDB数据页结构</title>
+      <link href="/crazy_ll/2019/10/05/%E4%BA%8B%E5%8A%A1/"/>
+      <url>/crazy_ll/2019/10/05/%E4%BA%8B%E5%8A%A1/</url>
+      
+        <content type="html"><![CDATA[<h1 id="事务（未完成）"><a href="#事务（未完成）" class="headerlink" title="事务（未完成）"></a>事务（未完成）</h1><p>离不开了4个基本</p><ol><li><strong>原子性</strong>：操作要么成功要么失败</li><li><strong>隔离性</strong>：多个操作之间互不影响，如果没有隔离性可能多个操作交替进行，导致获取到的数据不正确，造成不正确的结果，这其实和多线程类似</li><li><strong>持久性</strong>：一旦操作完成，数据就将会被永久的保留</li><li><strong>一致性</strong>：对于金额来说，转账以后，账户上增加的和减少的金额总数应该是不变的，对于其他数据来说，应该是要符合业务约束的，所以<code>一致性</code>的定义算是满足一定约束，满足预期要求的</li></ol><p><code>事务</code>其实就是保证了上面所说4种规则的一个或者多个操作，事务是个抽象的概念</p><a id="more"></a><h2 id="事务的状态："><a href="#事务的状态：" class="headerlink" title="事务的状态："></a>事务的状态：</h2><ol><li>活动的 active</li><li>部分提交 partially committed </li><li>已提交 commited</li><li>失败 failed</li><li>终止 abort</li></ol><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191010231148.png" alt></p><p>事务在内存中修改完成后是处于<code>部分提交</code>的状态，在写入磁盘以后才处于<code>提交</code>状态</p><p>对应的遇到错误的时候处于<code>失败</code>，回滚了数据才处于<code>中止</code></p><p>只有<code>提交</code>和<code>中止</code>两个是最终状态</p><h2 id="事务在MySQL中的写法"><a href="#事务在MySQL中的写法" class="headerlink" title="事务在MySQL中的写法"></a>事务在MySQL中的写法</h2><ul><li><p><code>BEGIN</code>     </p></li><li><p><code>START TRANSACTION</code></p></li></ul><p>在<code>START TRANSACTION</code>后可以加上修饰符</p><ul><li><p><code>START TRANSACTION READ ONLY</code>  ：当前事务只读</p></li><li><p><code>START TRANSACTION READ WRITE</code>：可以读写</p></li><li><p><code>START TRANSACTION WITH CONSISTENT SNAPSHOT</code>：启动一致性读</p></li></ul><p>其中各种条件可以通过逗号<code>,</code>连接，前两个是设置的事务的只读模式，所以只能2选1</p><p>提交事务 <code>COMMIT</code></p><p>回滚事务<code>ROLLBACK</code></p><p><code>MyISAM</code>引擎不支持事务，就算在命令中写了回滚也是无效的</p><h2 id="自动提交"><a href="#自动提交" class="headerlink" title="自动提交"></a>自动提交</h2><p>MySQL中有个变量<code>autocommit</code>默认为开启，在开启的时候，每一个SQL语句都可以看做是一个单独的事务，如果需要多个SQL共同放在一个事务，就需要现实的开启事务</p><p>关闭<code>autocommit</code>的话，就需要手动提交事务</p><h2 id="隐式回滚"><a href="#隐式回滚" class="headerlink" title="隐式回滚"></a>隐式回滚</h2><ul><li>使用DDL（Data definition language）</li><li>修改表</li><li>事务控制或有锁定的语句</li><li>加载数据的语句</li><li>复制的语句</li><li>其他</li></ul><p>具体看小册</p><h2 id="保存点"><a href="#保存点" class="headerlink" title="保存点"></a>保存点</h2><p>在一条语句执行完后执行<code>SAVEPOINT 保存点名称</code></p><p>回滚的时候可以执行<code>ROLLBACK TO 保存点名称</code>来回滚到指定的位置</p><p>释放保存点<code>RELEASE SAVEPOINT 保存点名称</code></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> MySQL </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 基础 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>InnoDB数据页结构</title>
+      <link href="/crazy_ll/2019/10/03/Buffer%20Pool/"/>
+      <url>/crazy_ll/2019/10/03/Buffer%20Pool/</url>
+      
+        <content type="html"><![CDATA[<h1 id="Buffer-Pool（未完成）"><a href="#Buffer-Pool（未完成）" class="headerlink" title="Buffer Pool（未完成）"></a>Buffer Pool（未完成）</h1><p>对于MySQL数据库来说，每次执行一个查询语句都是从磁盘对应的文件中读取出来，然后放到内存中，但是磁盘的速度相当慢，所以每次都从磁盘读取那速度就十分堪忧了。</p><p>并且！每次访问一个记录，都需要将对应的页先全部加载到内存中</p><p>所以该如何优化？</p><p>可以把这个页的数据（页大小默认为16k），全部缓存起来，那么在下次访问的时候就可以直接读取缓存中的页数据，而不用去磁盘中加载了，那么这个缓存就叫做 <code>Buffer Pool</code></p><h2 id="Buffer-Pool格式"><a href="#Buffer-Pool格式" class="headerlink" title="Buffer Pool格式"></a>Buffer Pool格式</h2><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191011160001.png" alt></p><a id="more"></a><p>看图说话，总共是3个部分</p><ul><li>控制块</li><li>碎片</li><li>缓存页</li></ul><p><code>缓存页</code>就是用来存储页的数据信息的，那么对于这么多缓存页肯定需要进行管理，否则怎么知道哪些页是哪个表的，在这个内存空间中的位置在哪里，页号是啥，还有一些锁信息和LSN</p><p>所以，<code>控制块</code>就是用来存储这些信息的</p><p>那一块连续的区间在设置了这两部分信息后，可能会出现有部分的空间不够分配，那就是<code>碎片</code> 了</p><h2 id="缓存后的管理问题"><a href="#缓存后的管理问题" class="headerlink" title="缓存后的管理问题"></a>缓存后的管理问题</h2><ol><li><p><strong>如何记录这一片内存空间中哪些缓存页是空的哪些是有数据的</strong></p><p>通过一个链表来保存对应的记录，称为<code>Free链表</code>如图<img src="http://py2mk0s3q.bkt.clouddn.com/20191011162711.png" alt></p><p>这个链表的基节点是保存在<code>Buffer Pool</code>空间以外的地方</p><p>那么对应的存储有数据的也相应的有一个链表来存储，叫做<code>Flush链表</code></p><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191011233731.png" alt></p><p>为什么叫做<code>Flush链表</code>，因为修改是在内存中做修改的，对一个缓存页中的某些数据进行修改了以后，这个缓存页就需要重新写回磁盘，不然数据就无效了，所以把这个页标记为<code>dirty page</code>也就是<code>脏页</code>，然后刷新回磁盘，但是不可能一标记完就刷新到磁盘，所以全部放到一个<code>Flush链表</code>中，说明这些是需要刷新到磁盘的内容。</p></li></ol><ol start="2"><li><p><strong>如何定位到对应的页</strong></p><p>用散列表就OK了，将<code>表空间号+页号</code>作为key，缓存页作为value</p></li><li><p><strong>页满了怎么办</strong></p><p>满了就需要删除，那应该怎么删除？</p><p><strong>注意</strong>：现在有的数据结构是 </p><ul><li>一个free链表</li><li>一个flush链表</li><li>一个散列表也就是hash表</li></ul><p>未包含任何数据的缓存页是存储在free链表中，而已经缓存了的页是放在这个散列表中的，flush链表中的数据是待刷新到磁盘的</p><p>能直接想到的就是LRU最近最少使用来删除链表尾部的页，而有新的页加载进内存的时候则放在链表的头部</p></li></ol><ol start="4"><li></li></ol>]]></content>
+      
+      
+      <categories>
+          
+          <category> MySQL </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 基础 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>InnoDB数据页结构</title>
+      <link href="/crazy_ll/2019/10/01/MySql%E6%88%90%E6%9C%AC%E5%88%86%E6%9E%90/"/>
+      <url>/crazy_ll/2019/10/01/MySql%E6%88%90%E6%9C%AC%E5%88%86%E6%9E%90/</url>
+      
+        <content type="html"><![CDATA[<h1 id="成本-未完成"><a href="#成本-未完成" class="headerlink" title="成本(未完成)"></a>成本(未完成)</h1><p>一条查询语句包含两种成本</p><ul><li>I/O成本</li><li>CPU成本</li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> MySQL </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 基础 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>InnoDB数据页结构</title>
+      <link href="/crazy_ll/2019/09/29/InnoDB%E6%95%B0%E6%8D%AE%E9%A1%B5%E7%BB%93%E6%9E%84/"/>
+      <url>/crazy_ll/2019/09/29/InnoDB%E6%95%B0%E6%8D%AE%E9%A1%B5%E7%BB%93%E6%9E%84/</url>
+      
+        <content type="html"><![CDATA[<h1 id="数据页结构"><a href="#数据页结构" class="headerlink" title="数据页结构"></a>数据页结构</h1><p>InnoDB在不同的目的下设计了许多不同的 <code>页</code></p><p>其中存放记录的叫做 <code>数据页</code></p><h2 id="页的结构图"><a href="#页的结构图" class="headerlink" title="页的结构图"></a>页的结构图</h2><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191009221736.png" alt></p><a id="more"></a><p>所有页都有 <code>File Header</code> <code>File Trailer</code> </p><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191009221753.png" alt></p><h2 id="Page-Directory"><a href="#Page-Directory" class="headerlink" title="Page Directory"></a>Page Directory</h2><p>这个是页内快速查找所需数据的方式，就好像书本的目录，对主要章节记录了页数，<code>Page Directory</code>也是类似的功能，样子就像下图</p><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191009222542.png" alt></p><p>由于页中的用户数据是一个单链表，在查找页中所需要的数据，比如<code>主键=8</code>，就只能通过遍历这个链表来找到这条数据，为了提高效率，就通过<code>槽(slot)</code>来实现快速查找。</p><p>这个槽其实就是一条数据，从图里也能看出来 </p><p>就是通过将数据进行分组，然后将每一组（除了最小的）最大的数据作为一个槽</p><p>InnoDB中这个分组是有规定的</p><ul><li>对于最小记录所在的分组只能有 <strong><em>1</em></strong> 条记录，最大记录所在的分组拥有的记录条数只能在 <strong><em>1~8</em></strong> 条之间，剩下的分组中记录的条数范围只能在是 <strong><em>4~8</em></strong> 条之间</li></ul><h2 id="File-Header"><a href="#File-Header" class="headerlink" title="File Header"></a>File Header</h2><p>页和页之间是通过这个<code>File Header</code>中记录上一页的页号和下一页的页号来形成一个双链表，不过并不是所有类型的页都有上下页的属性，数据页是有的</p><p><img src="http://py2mk0s3q.bkt.clouddn.com/20191009225234.png" alt></p><p>在Header中还有一个数据：<code>FIL_PAGE_SPACE_OR_CHKSUM</code>代表当前这个页的校验和</p><h2 id="File-Trailer"><a href="#File-Trailer" class="headerlink" title="File Trailer"></a>File Trailer</h2><p>数据写入mysql，是在内存中修改完页中的内容后再写入磁盘，如果这时候出现问题导致磁盘写入失败，该怎么办</p><p>所以在<code>File Trailer</code>中，前4个字节代表的也是校验和，这个和<code>Header</code>中的校验和是一致的，因为写磁盘的时候，<code>Header</code>的校验和会先同步到磁盘，这时候如果出现断电等问题，那么头尾校验和就不一致</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> MySQL </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 基础 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>InnoDB数据页结构</title>
       <link href="/crazy_ll/2019/09/29/%E6%96%B0%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9/InnoDB%E6%95%B0%E6%8D%AE%E9%A1%B5%E7%BB%93%E6%9E%84/"/>
       <url>/crazy_ll/2019/09/29/%E6%96%B0%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9/InnoDB%E6%95%B0%E6%8D%AE%E9%A1%B5%E7%BB%93%E6%9E%84/</url>
       
