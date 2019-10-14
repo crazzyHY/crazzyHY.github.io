@@ -4,7 +4,7 @@
   
     
     <entry>
-      <title>InnoDB数据页结构</title>
+      <title>事务</title>
       <link href="/crazy_ll/2019/10/05/%E4%BA%8B%E5%8A%A1/"/>
       <url>/crazy_ll/2019/10/05/%E4%BA%8B%E5%8A%A1/</url>
       
@@ -29,7 +29,7 @@
     
     
     <entry>
-      <title>InnoDB数据页结构</title>
+      <title>什么是Buffer Pool</title>
       <link href="/crazy_ll/2019/10/03/Buffer%20Pool/"/>
       <url>/crazy_ll/2019/10/03/Buffer%20Pool/</url>
       
