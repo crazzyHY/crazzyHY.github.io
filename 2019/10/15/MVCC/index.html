@@ -83,7 +83,7 @@
 </ul>
 <p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191020234033.png" alt></p>
 <p>在<code>undo log</code>中，除了insert对应的undo日志没有<code>old roll_pointer</code>，其余的update类型的undo日志都有一个指针指向的上个修改的记录，那么就形成了一个<code>版本链</code>，如图中</p>
-<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191021140618.png" alt></p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191021155724.png" alt></p>
 <h1 id="ReadView"><a href="#ReadView" class="headerlink" title="ReadView"></a>ReadView</h1><p>在不同隔离级别下，其实最重要的就是判断哪些数据对于当前的事务是可见的，所以<code>ReadView</code>就是为了解决这个问题</p>
 <p>在<code>ReadView</code>中包含了4个信息：</p>
 <ul>
