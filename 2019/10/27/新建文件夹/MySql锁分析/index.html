@@ -17,9 +17,9 @@
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> t1 <span class="keyword">values</span>(<span class="number">35</span>,<span class="string">'p'</span>);</span><br><span class="line"><span class="keyword">commit</span>;</span><br></pre></td></tr></table></figure>
 
 <p>那么会怎么样？</p>
+<p>结果是（按顺序来）：</p>
 <a id="more"></a>
 
-<p>结果是（按顺序来）：</p>
 <ol>
 <li>事务T1查询不到<code>m1=35</code>的结果</li>
 <li>事务T2插入了一条<code>m1=35 n1=&#39;p&#39;</code>的记录，并且插入成功（插入一般不需要锁，但是有情况下还是会生成锁），并且提交了事务</li>
