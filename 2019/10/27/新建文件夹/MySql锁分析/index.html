@@ -16,6 +16,7 @@
 <p>接着现在有一个事务T2，执行下面的sql，然后提交</p>
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> t1 <span class="keyword">values</span>(<span class="number">35</span>,<span class="string">'p'</span>);</span><br><span class="line"><span class="keyword">commit</span>;</span><br></pre></td></tr></table></figure>
 
+<p>那么会怎么样？</p>
 <a id="more"></a>
 
 <p>结果是（按顺序来）：</p>
