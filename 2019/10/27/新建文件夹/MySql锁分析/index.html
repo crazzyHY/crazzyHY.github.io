@@ -54,9 +54,23 @@
 
 <p>由于是对聚簇索引的访问，所以只需要在聚簇索引上加锁就可以了，所以这两条语句在执行的时候，先在这个<code>t1</code>表上加了一个<code>IS意向锁</code>或者<code>IX意向锁</code>，然后在具体的行上面，加上对应的<code>S锁</code>或者<code>X锁</code>，表锁和行锁</p>
 <h3 id="对主键进行等值匹配后的修改或者删除"><a href="#对主键进行等值匹配后的修改或者删除" class="headerlink" title="对主键进行等值匹配后的修改或者删除"></a>对主键进行等值匹配后的修改或者删除</h3><p>比如</p>
-<figure class="highlight routeros"><table><tr><td class="code"><pre><span class="line">update t1 <span class="builtin-name">set</span> <span class="attribute">n1</span>=<span class="string">'f'</span> where <span class="attribute">m1</span>=30;</span><br></pre></td></tr></table></figure>
+<figure class="highlight routeros"><table><tr><td class="code"><pre><span class="line">update t1 <span class="builtin-name">set</span> <span class="attribute">n1</span>=<span class="string">'f'</span> where <span class="attribute">m1</span>=30;#1</span><br></pre></td></tr></table></figure>
 
-<p>我们这个表里面，<code>n1</code>是二级索引，这条记录对二级索引进行了更新</p>
+<p>我们这个表里面，<code>n1</code>是二级索引</p>
+<p>这时在另一个事务分别里面执行（这里用了<code>for update</code>锁定，用<code>lock in share mode</code>也是一样的效果）</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">where</span> m1=<span class="number">30</span> <span class="keyword">for</span> <span class="keyword">update</span>;<span class="comment">#2</span></span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">where</span> n1=<span class="string">'d'</span> <span class="keyword">for</span> <span class="keyword">update</span>;<span class="comment">#3</span></span><br></pre></td></tr></table></figure>
+
+<p>其中，在不提交的情况下，<code>1,2,3</code>顺序不管怎么换，都是会导致第二条执行的sql阻塞</p>
+<p><code>sql#1</code>这条是修改了二级索引的值，重新回顾一个重点<strong>锁是加在索引上</strong>，所以看结果<code>sql#2</code>和<code>sql#3</code>阻塞，说明在主键和二级索引上可能都加了锁</p>
+<p>实际上这条<code>sql#1</code>是这样做的：</p>
+<ol>
+<li>通过<code>where</code>条件定位到聚簇索引的位置，然后锁住，而且是<code>X锁</code>，接着修改对应的值</li>
+<li>然后再找到对应的二级索引，锁住，改掉</li>
+</ol>
+<p>那么同样的，如果执行</p>
+<figure class="highlight n1ql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">delete</span> <span class="keyword">from</span> t1 <span class="keyword">where</span> m1=<span class="number">30</span>;</span><br></pre></td></tr></table></figure>
+
+<p>删除的话肯定是要<code>m1=30</code>的这条记录的所有信息都消失，所以二级索引肯定也要删，那么加锁也是和上面的一样的，先在主键上加锁，然后再到二级索引加锁，其实从临界资源并发的处理角度思考就可以了</p>
 </div></article><div class="post-meta__tag-list"><a class="post-meta__tags" href="/crazy_ll/tags/基础/">基础</a></div><nav id="pagination"><div class="next-post pull-right"><a href="/crazy_ll/2019/10/15/MVCC/"><span>MVCC</span><i class="fa fa-chevron-right"></i></a></div></nav><div id="vcomment"></div><script src="https://cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js"></script><script>var notify = 'true' == true ? true : false;
 var verify = 'false' == true ? true : false;
 var GUEST_INFO = ['nick','mail','link'];
