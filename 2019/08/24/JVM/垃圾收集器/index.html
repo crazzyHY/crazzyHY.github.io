@@ -1,0 +1,121 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta name="generator" content="Hexo 3.9.0"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta name="description" content="垃圾收集器详解"><meta name="keywords" content="基础,GC"><meta name="author" content="HY"><meta name="copyright" content="HY"><title>垃圾收集器详解 | HY'S 代码挖掘站</title><link rel="shortcut icon" href="/crazy_ll/melody-favicon.ico"><link rel="stylesheet" href="/crazy_ll/css/index.css?version=1.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@latest/css/font-awesome.min.css?version=1.6.1"><link rel="dns-prefetch" href="https://cdn.staticfile.org"><link rel="dns-prefetch" href="https://cdn.bootcss.com"><link rel="dns-prefetch" href="https://creativecommons.org"><script>var GLOBAL_CONFIG = { 
+  root: '/crazy_ll/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容:${query}"}},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  }
+} </script></head><body><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="toggle-sidebar-info text-center"><span data-toggle="切换文章详情">切换站点概览</span><hr></div><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar"></div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#垃圾收集器"><span class="toc-number">1.</span> <span class="toc-text">垃圾收集器</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Serial收集器"><span class="toc-number">1.1.</span> <span class="toc-text">Serial收集器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ParNew"><span class="toc-number">1.2.</span> <span class="toc-text">ParNew</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Parallel-Scavenge收集器"><span class="toc-number">1.3.</span> <span class="toc-text">Parallel Scavenge收集器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Serial-Old-收集器"><span class="toc-number">1.4.</span> <span class="toc-text">Serial Old 收集器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Parallel-Old收集器"><span class="toc-number">1.5.</span> <span class="toc-text">Parallel Old收集器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CMS收集器"><span class="toc-number">1.6.</span> <span class="toc-text">CMS收集器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#G1收集器"><span class="toc-number">1.7.</span> <span class="toc-text">G1收集器</span></a></li></ol></li></ol></div></div><div class="author-info hide"><div class="author-info__avatar text-center"><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164931.png"></div><div class="author-info__name text-center">HY</div><div class="author-info__description text-center">代码挖掘机</div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/crazy_ll/archives"><span class="pull-left">文章</span><span class="pull-right">15</span></a><a class="author-info-articles__tags article-meta" href="/crazy_ll/tags"><span class="pull-left">标签</span><span class="pull-right">3</span></a><a class="author-info-articles__categories article-meta" href="/crazy_ll/categories"><span class="pull-left">分类</span><span class="pull-right">4</span></a></div></div></div><div id="content-outer"><div id="top-container" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/crazy_ll/">HY'S 代码挖掘站</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page social-icon search"><i class="fa fa-search"></i><span> 搜索</span></a><a class="site-page" href="/">主页</a><a class="site-page" href="/archives">归档</a><a class="site-page" href="/tags">标签</a><a class="site-page" href="/categories">分类</a><a class="site-page" href="/comment">留言板</a></span></div><div id="post-info"><div id="post-title">垃圾收集器详解</div><div id="post-meta"><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-08-24</time><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/crazy_ll/categories/java基础/">java基础</a></div></div></div><div class="layout" id="content-inner"><article id="post"><div class="article-container" id="post-content"><h1 id="垃圾收集器"><a href="#垃圾收集器" class="headerlink" title="垃圾收集器"></a>垃圾收集器</h1><p>图中有7种收集器，收集器之间存在连线说明可以搭配使用，所处位置标明了是新生代还是老年代的收集器，没有最好的收集器出现，只有最合适的（到目前为止）</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019162347.png" alt></p>
+<a id="more"></a>
+<h2 id="Serial收集器"><a href="#Serial收集器" class="headerlink" title="Serial收集器"></a>Serial收集器</h2><p>单线程，只会使用一个CPU或者一个收集线程去完成垃圾收集工作<br>进行垃圾收集的时候，必须要暂停其他所有的工作线程直到结束<br><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019162359.png" alt></p>
+<p>这是serial收集器的大致工作流程</p>
+<p>书中比喻：“你妈妈在给你打扫房间的时候， 肯定也会让你老老实实地在椅子上或者房间外待着， 如果她一边打扫， 你一边乱扔纸屑， 这房间还能打扫完？”</p>
+<p>从  Serial  -&gt; Parallel  -&gt; Concurrent Mark Sweep(CMS) -&gt; Garbage First (G1,最前沿成果)，仍然没有办法完全消除用户线程的停顿时间（不包括RTSJ中的收集器）</p>
+<p>Serial仍然是虚拟机运行在Client下的默认新生代收集器（JVM有两种运行模式Server与Client），64位下只有Server模式</p>
+<p>优点：</p>
+<ul>
+<li>简单高效（和其他收集器相比），单个CPU来说，没有线程交互的开销，只做垃圾回收自然有最高的单线程收集效率，在Client下，内存不大（百兆），停顿时间在几十毫秒~100多毫秒只要不频繁发生就可以</li>
+</ul>
+<h2 id="ParNew"><a href="#ParNew" class="headerlink" title="ParNew"></a>ParNew</h2><p>ParNew是Serial的多线程版本，除了使用多线程之外，其余行为几乎和Serial一致<br><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019162458.png" alt></p>
+<p>是运行在Server模式下的虚拟机中的首选新生代垃圾回收器</p>
+<p>其中有个与性能无关但是很重要的原因是，除了Serial以外，ParNew是唯一能和CMS合作的收集器</p>
+<p>ParNew收集器也是使用-XX： +UseConcMarkSweepGC选项后的默认新生代收集器， 也可以使用-XX+UseParNewGC选项来强制指定它</p>
+<p>ParNew在单CPU的环境下绝对不会比Serial有更好的效果，存在线程交互的开销，在两个CPU的情况下效果都不能百分百超过Serial</p>
+<p>ParNew默认开启的线程数和CPU数量相同</p>
+<p>有个重要的概念区别（在垃圾收集器的上下文语境中）：</p>
+<ul>
+<li>并行：多条垃圾收集线程并行工作，用户线程仍然处于等待状态</li>
+<li>并发：用户线程和垃圾收集线程同时执行（不一定是并行，可能是交替执行），用户程序在继续运行，垃圾收集程序运行在另一个CPU上<h2 id="Parallel-Scavenge收集器"><a href="#Parallel-Scavenge收集器" class="headerlink" title="Parallel Scavenge收集器"></a>Parallel Scavenge收集器</h2></li>
+<li>新生代收集器</li>
+<li>复制算法</li>
+<li>并行的多线程收集</li>
+</ul>
+<p>特别之处：这个收集器的关注点和其他收集器不同，CMS等收集器是尽可能的缩短垃圾收集时候用户的停顿时间，而Parallel Scavenge是达到一个可控制的吞吐量</p>
+<p>吞吐量：CPU用于用户代码的时间与CPU总消耗时间的比值，吞吐量=运行用户代码时间/（运行用户代码时间+垃圾收集时间），虚拟机总共运行了100分钟，垃圾收集消耗1分钟，吞吐量就是99%</p>
+<p>停顿时间越短越适合和用户交互的程序，高吞吐量可以高效的利用CPU的时间，尽快完成任务，适合在后台运算不需要太多交互的任务</p>
+<p>Parallel Scavenge收集器提供了两个参数用于精确控制吞吐量， 分别是控制最大垃圾收集停顿时间的-XX：</p>
+<p>MaxGCPauseMillis参数以及直接设置吞吐量大小的-XX： GCTimeRatio参数。</p>
+<p>MaxGCPauseMillis：允许大于0的毫秒数，收集器会尽可能的保证内存回收话费的时间不超过设定的时间，GC停顿时间是以牺牲吞吐量和新生代空间换取的，如果缩小新生代，那么会导致回收更频繁，虽然时间下降了，但是次数多了，吞吐量还是下降了</p>
+<p>GCTimeRatio：0~100的整数，参数如果为19，最大GC占总时间为5%（1/(1+19)），默认99</p>
+<p>本收集器也叫 吞吐量优先收集器，还有一个参数+UseAdaptiveSizePolicy，打开这个参数以后就不需要手工指定细节参数了，虚拟机会根据运行情况收集性能监控信息动态调整参数，称为GC自使用的调节策略</p>
+<h2 id="Serial-Old-收集器"><a href="#Serial-Old-收集器" class="headerlink" title="Serial Old 收集器"></a>Serial Old 收集器</h2><ul>
+<li>是Serial的老年代版本</li>
+<li>单线程收集器，使用 标记-整理 算法</li>
+<li>主要是Client模式的虚拟机使用</li>
+<li>在Server模式下有两大用途：<ul>
+<li>在jdk5以及之前的版本与Parallel Scavenge收集器搭配使用</li>
+<li>作为CMS收集器的后备原，在并发收集发生Concurrent Mode Failure时使用</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019162512.png" alt></p>
+<h2 id="Parallel-Old收集器"><a href="#Parallel-Old收集器" class="headerlink" title="Parallel Old收集器"></a>Parallel Old收集器</h2><ul>
+<li>是Parallel Scavenge的<strong>老年代</strong>版本</li>
+<li>多线程，<strong>标记-整理算法</strong></li>
+</ul>
+<p>在1.6之前，新生代选择了Parallel Scavenge，老年代就只能选择Serial Old，但是Serial Old在服务端应用性能上的拖累，导致使用了Parallel Scavenge也未必能达到吞吐量最大化的效果，在老年代很大而且硬件比较高级的场景下，这种组合的吞吐量都不一定有ParNew+CMS好。</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019162522.png" alt></p>
+<p>在1.6之后，吞吐量组合（Parallel Scavenge/Parallel Old），在注重吞吐量的以及CPU资源敏感的场景，都可以考虑使用这个组合。</p>
+<h2 id="CMS收集器"><a href="#CMS收集器" class="headerlink" title="CMS收集器"></a>CMS收集器</h2><p>CMS(Concurrent Mark Sweep):以获取最短回收停顿时间为目标的收集器。</p>
+<p>目前大部分在互联网或者B/S系统的服务端上，十分重视服务的相应速度，希望停顿的时间最短，CMS就很适合这类应用。</p>
+<p>CMS的运作过程比较复杂，有4个步骤：</p>
+<ol>
+<li>初始标记(initial mark)</li>
+<li>并发标记(concurrrent mark)</li>
+<li>重新标记(remark)</li>
+<li>并发清除(concurrent sweep)</li>
+</ol>
+<p>其中，<strong>初始标记</strong>和<strong>重新标记</strong>需要 Stop The World 。<br>初始标记只是标记一下GC Roots能直接关联到的对象，速度很快。<br>并发标记是进行GC RootsTracing的过程，<strong>重新标记</strong>则是修正并发标记期间因用户程序继续运作而导致标记变动的部分对象的标记记录，这部分停顿时间比1来的长远比2来的短</p>
+<p>并发标记和并发清除过程收集器线程都可以与用户线程一起工作，所以总体上来说CMS收集器的回收过程是与用户线程一起并发执行的。<br>下图可以清楚的看到CMS的运作和停顿时间</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019162532.png" alt></p>
+<p>但是CMS也有3个很明显的缺点</p>
+<ul>
+<li><strong>对CPU资源非常敏感</strong>：默认的回收线程数是（N+3）/4</li>
+<li><strong>无法处理浮动垃圾</strong>：在并发清理阶段，由于和用户线程同时进行，这一部分垃圾只能在下次GC时清理，这部分就称为‘浮动垃圾’，由于收集期间用户线程还需要运行，所以就需要预留有足够的内存给用户使用，在1.6中，CMS启动的阈值提升到92%，如果运行期间内存无法满足需要，就会出现“Concurrent Mode Failure”，这时候会使用Serial Old来重新进行老年代收集，停顿时间就更长了，所以说参数-XX： CM SInitiatingOccupancyFraction设置得太高很容易导致大量“Concurrent Mode Failure” 失败， 性能反而降低。</li>
+<li><strong>标记-清除</strong>：在收集结束会有大量空间碎片产生，当给大对象分配空间的时候，可能会触发一次Full GC，解决这个问题有两个参数：<strong>+UseCMSCompactAtFullCollection</strong>开关参数（默认就是开启的） ， 用于在CMS收集器顶不住要进行FullGC时开启内存碎片的合并整理过程， 内存整理的过程是无法并发的， 空间碎片问题没有了， 但停顿时间不得不变长。 虚拟机设计者还提供了另外一个参数-XX：<strong>CMSFullGCsBeforeCompaction</strong>， 这个参数是用于设置执行多少次不压缩的Full GC后，跟着来一次带压缩的（默认值为0， 表示每次进入Full GC时都进行碎片整理） 。</li>
+</ul>
+<h2 id="G1收集器"><a href="#G1收集器" class="headerlink" title="G1收集器"></a>G1收集器</h2><p>特点：</p>
+<ul>
+<li>并发与并行：充分利用了硬件优势，使用多个CPU来缩短停顿时间，将其他收集器需要停顿线程的GC动作变为铜鼓并发的方式让程序继续执行</li>
+<li>分代收集：G1可以独自管理整个GC堆，能用不同的方式去处理新，老对象</li>
+<li>空间整合：整体看是 标记-整理 ，局部来看是基于 复制 ，这也说明了G1在收集的过程中不会出现碎片，保证有足够的连续空间可以分配</li>
+<li>可预测的停顿：G1和CMS一样关注降低停顿时间，G1还可以建立可预测的停顿时间模型，能让使用者明确指定在一个长度为M毫秒的时间内，消耗在垃圾收集上的时间不能超过N毫秒</li>
+</ul>
+<p>使用G1收集器，Java堆的内存布局和其他的收集器有很大的差别，他把整个Java堆划分成了多个大小相等的独立区域(Region)，虽然还有新生代和老年代的概念，但是不再是物理隔离，他们都是一部分Region(不需要连续)的集合。</p>
+<p>G1可以预测停顿时间是因为它可以有计划的<strong>避免在在整个Java堆中进行全区域的垃圾收集</strong>。G1会跟踪每个Region中垃圾堆积的价值大小(回收所获得的空间大小及回收所需要的时间)，在后台维护一个优先列表，每次根据允许的收集时间，<strong>优先回收价值最大的Region</strong>，这也是Garbage-First的名字由来。这种<strong>Region划分内存空间以及优先级区域回收的方式，保证了G1在有限时间内可以获取尽可能高的收集效率</strong>。</p>
+<p>分成多个Region区域的难点：Region不可能孤立。一个对象分配在某个Region中，会被堆中任意的对象发生引用关系。在判断可达性确定对象是否存活的时候，那就得需要扫描整个Java堆。这个问题不是只在G1中才有，只是在G1中更加突出。在之前的分代收集中，新生代一半比老年代小许多，新生代的收集也比老年代的频繁，回收新生代的对象也面临相同的问题，如果回收新生代也要扫描老年代的话，Minor GC的效率可能会下降不少。(在gc的时候会去扫全堆，但是通过后面的Remembered Set来避免了扫全堆)</p>
+<p>Region之间的对象引用以及其他收集器中的新生代和老年代之间的对象引用，虚拟机都是<strong>使用“Remembered Set”来避免全堆扫描</strong>。<strong>每个Region都有一个对应的Remembered Set，虚拟机发现程序在对Reference类型的数据进行写操作的时候，会产生Write Barrier 暂时中断写操作，检查Reference引用的对象是否处在不同的Region中(分代中就是检查老年代是否引用了新生代的对象)，是的话就通过CardTable把相关引用信息记录到被引用对象所属的Region的Remembered Set中</strong>，回收时，在GC根节点枚举范围中加入Remembered Set就可以保证不扫全堆也不会有漏。</p>
+<p>G1收集器的运作可以分为：</p>
+<ul>
+<li><strong>初始标记</strong>（Initial Marking）：初始标记只是标记一下GC Roots能直接关联到的对象，并且修改TAMS（Next Top at Mark Start），让下一阶段用户程序并发运行时，能在正确可用的Region中创建新对象，这阶段需要停顿线程，但是耗时很短。</li>
+<li><strong>并发标记</strong>（Concurrent Marking）：从GC Roots开始对堆中对象进行可达性分析，找出存活的对象，耗时长，但是可以和用户线程并发执行。</li>
+<li><strong>最终标记</strong>（Final Marking）：修正并发标记期间用户线程继续运行导致标记产生变动的一部分标记，jvm会将这段时间对象变化记录在线程Remembered Set Logs里面，最终标记阶段需要把这里面的数据整合到Remembered Set中，需要停顿线程，但是可以并行执行。</li>
+<li><strong>筛选回收</strong>（Live Data Counting and Evacuation）：先对各个Region的回收价值和成本进行排序，根据用户希望的GC停顿时间来制定回收计划，这个阶段根据Sun公司透露的信息来看也可以做到并发执行，但是因为只回收一部分的Region，时间是用户可以控制的，而且停顿用户，所以停顿用户线程将大幅提高效率。</li>
+</ul>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019162607.png" alt></p>
+</div></article><div class="post-meta__tag-list"><a class="post-meta__tags" href="/crazy_ll/tags/基础/">基础</a><a class="post-meta__tags" href="/crazy_ll/tags/GC/">GC</a></div><nav id="pagination"><div class="prev-post pull-left"><a href="/crazy_ll/2019/08/25/JVM/GC具体过程/"><i class="fa fa-chevron-left">  </i><span>GC过程详解(OopMap,RememberSet)</span></a></div><div class="next-post pull-right"><a href="/crazy_ll/2019/07/20/redis/Redis持久化方式/"><span>Redis持久化方式</span><i class="fa fa-chevron-right"></i></a></div></nav><div id="vcomment"></div><script src="https://cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js"></script><script>var notify = 'true' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'XkvBpo38Cd4vvKlSGOwAyhqj-MdYXbMMI',
+  appKey:'xeizOTCtDm1lTOaKDO8p9Nex',
+  placeholder:'随便写点什么吧',
+  avatar:'mm',
+  guest_info:guest_info,
+  pageSize:'10',
+  lang: 'zh-cn'
+})</script></div></div><footer class="footer-bg" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div class="layout" id="footer"><div class="copyright">&copy;2018 - 2019 By HY</div><div class="framework-info"><span>驱动 - </span><a href="https://learncode.com.cn"><span>HYY</span></a><span class="footer-separator">|</span><span>主题 - </span><a href="https://learncode.com.cn"><span>HH</span></a></div><div class="footer_custom_text">welcome</div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_page_pv"><i class="fa fa-file-o"></i><span id="busuanzi_value_page_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/crazy_ll/js/utils.js?version=1.6.1"></script><script src="/crazy_ll/js/fancybox.js?version=1.6.1"></script><script src="/crazy_ll/js/sidebar.js?version=1.6.1"></script><script src="/crazy_ll/js/copy.js?version=1.6.1"></script><script src="/crazy_ll/js/fireworks.js?version=1.6.1"></script><script src="/crazy_ll/js/transition.js?version=1.6.1"></script><script src="/crazy_ll/js/scroll.js?version=1.6.1"></script><script src="/crazy_ll/js/head.js?version=1.6.1"></script><script src="/crazy_ll/js/search/local-search.js"></script><script>if(/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
+  $('#nav').addClass('is-mobile')
+  $('footer').addClass('is-mobile')
+}</script><div class="search-dialog" id="local-search"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章"></div></div></div><hr><div id="local-search-results"><div id="local-hits"></div><div id="local-stats"><div class="local-search-stats__hr" id="hr"><span>由</span> <a href="https://github.com/wzpan/hexo-generator-search" style="color:#49B1F5;">hexo-generator-search</a>
+ <span>提供支持</span></div></div></div><span class="search-close-button"><i class="fa fa-times"></i></span></div><div class="search-mask"></div></body></html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta name="generator" content="Hexo 3.9.0"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta name="description" content="InnoDB数据页结构"><meta name="keywords" content="基础"><meta name="author" content="HY"><meta name="copyright" content="HY"><title>InnoDB数据页结构 | HY'S 代码挖掘站</title><link rel="shortcut icon" href="/crazy_ll/melody-favicon.ico"><link rel="stylesheet" href="/crazy_ll/css/index.css?version=1.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@latest/css/font-awesome.min.css?version=1.6.1"><link rel="dns-prefetch" href="https://cdn.staticfile.org"><link rel="dns-prefetch" href="https://cdn.bootcss.com"><link rel="dns-prefetch" href="https://creativecommons.org"><script>var GLOBAL_CONFIG = { 
+  root: '/crazy_ll/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容:${query}"}},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  }
+} </script></head><body><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="toggle-sidebar-info text-center"><span data-toggle="切换文章详情">切换站点概览</span><hr></div><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar"></div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#数据页结构"><span class="toc-number">1.</span> <span class="toc-text">数据页结构</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#页的结构图"><span class="toc-number">1.1.</span> <span class="toc-text">页的结构图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Page-Directory"><span class="toc-number">1.2.</span> <span class="toc-text">Page Directory</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#File-Header"><span class="toc-number">1.3.</span> <span class="toc-text">File Header</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#File-Trailer"><span class="toc-number">1.4.</span> <span class="toc-text">File Trailer</span></a></li></ol></li></ol></div></div><div class="author-info hide"><div class="author-info__avatar text-center"><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164931.png"></div><div class="author-info__name text-center">HY</div><div class="author-info__description text-center">代码挖掘机</div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/crazy_ll/archives"><span class="pull-left">文章</span><span class="pull-right">15</span></a><a class="author-info-articles__tags article-meta" href="/crazy_ll/tags"><span class="pull-left">标签</span><span class="pull-right">3</span></a><a class="author-info-articles__categories article-meta" href="/crazy_ll/categories"><span class="pull-left">分类</span><span class="pull-right">4</span></a></div></div></div><div id="content-outer"><div id="top-container" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/crazy_ll/">HY'S 代码挖掘站</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page social-icon search"><i class="fa fa-search"></i><span> 搜索</span></a><a class="site-page" href="/">主页</a><a class="site-page" href="/archives">归档</a><a class="site-page" href="/tags">标签</a><a class="site-page" href="/categories">分类</a><a class="site-page" href="/comment">留言板</a></span></div><div id="post-info"><div id="post-title">InnoDB数据页结构</div><div id="post-meta"><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-09-29</time><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/crazy_ll/categories/MySQL/">MySQL</a></div></div></div><div class="layout" id="content-inner"><article id="post"><div class="article-container" id="post-content"><h1 id="数据页结构"><a href="#数据页结构" class="headerlink" title="数据页结构"></a>数据页结构</h1><p>InnoDB在不同的目的下设计了许多不同的 <code>页</code></p>
+<p>其中存放记录的叫做 <code>数据页</code></p>
+<h2 id="页的结构图"><a href="#页的结构图" class="headerlink" title="页的结构图"></a>页的结构图</h2><p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164555.png" alt></p>
+<a id="more"></a>
+
+<p>所有页都有 <code>File Header</code> <code>File Trailer</code> </p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164620.png" alt></p>
+<h2 id="Page-Directory"><a href="#Page-Directory" class="headerlink" title="Page Directory"></a>Page Directory</h2><p>这个是页内快速查找所需数据的方式，就好像书本的目录，对主要章节记录了页数，<code>Page Directory</code>也是类似的功能，样子就像下图</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164638.png" alt></p>
+<p>由于页中的用户数据是一个单链表，在查找页中所需要的数据，比如<code>主键=8</code>，就只能通过遍历这个链表来找到这条数据，为了提高效率，就通过<code>槽(slot)</code>来实现快速查找。</p>
+<p>这个槽其实就是一条数据，从图里也能看出来 </p>
+<p>就是通过将数据进行分组，然后将每一组（除了最小的）最大的数据作为一个槽</p>
+<p>InnoDB中这个分组是有规定的</p>
+<ul>
+<li>对于最小记录所在的分组只能有 <strong><em>1</em></strong> 条记录，最大记录所在的分组拥有的记录条数只能在 <strong><em>1~8</em></strong> 条之间，剩下的分组中记录的条数范围只能在是 <strong><em>4~8</em></strong> 条之间</li>
+</ul>
+<h2 id="File-Header"><a href="#File-Header" class="headerlink" title="File Header"></a>File Header</h2><p>页和页之间是通过这个<code>File Header</code>中记录上一页的页号和下一页的页号来形成一个双链表，不过并不是所有类型的页都有上下页的属性，数据页是有的</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164652.png" alt></p>
+<p>在Header中还有一个数据：<code>FIL_PAGE_SPACE_OR_CHKSUM</code>代表当前这个页的校验和</p>
+<h2 id="File-Trailer"><a href="#File-Trailer" class="headerlink" title="File Trailer"></a>File Trailer</h2><p>数据写入mysql，是在内存中修改完页中的内容后再写入磁盘，如果这时候出现问题导致磁盘写入失败，该怎么办</p>
+<p>所以在<code>File Trailer</code>中，前4个字节代表的也是校验和，这个和<code>Header</code>中的校验和是一致的，因为写磁盘的时候，<code>Header</code>的校验和会先同步到磁盘，这时候如果出现断电等问题，那么头尾校验和就不一致</p>
+</div></article><div class="post-meta__tag-list"><a class="post-meta__tags" href="/crazy_ll/tags/基础/">基础</a></div><nav id="pagination"><div class="prev-post pull-left"><a href="/crazy_ll/2019/10/01/MySQL/MySql成本分析/"><i class="fa fa-chevron-left">  </i><span>MySQL成本分析</span></a></div><div class="next-post pull-right"><a href="/crazy_ll/2019/09/28/MySQL/InnoDB存储结构/"><span>InnoDB的存储结构</span><i class="fa fa-chevron-right"></i></a></div></nav><div id="vcomment"></div><script src="https://cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js"></script><script>var notify = 'true' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'XkvBpo38Cd4vvKlSGOwAyhqj-MdYXbMMI',
+  appKey:'xeizOTCtDm1lTOaKDO8p9Nex',
+  placeholder:'随便写点什么吧',
+  avatar:'mm',
+  guest_info:guest_info,
+  pageSize:'10',
+  lang: 'zh-cn'
+})</script></div></div><footer class="footer-bg" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div class="layout" id="footer"><div class="copyright">&copy;2018 - 2019 By HY</div><div class="framework-info"><span>驱动 - </span><a href="https://learncode.com.cn"><span>HYY</span></a><span class="footer-separator">|</span><span>主题 - </span><a href="https://learncode.com.cn"><span>HH</span></a></div><div class="footer_custom_text">welcome</div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_page_pv"><i class="fa fa-file-o"></i><span id="busuanzi_value_page_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/crazy_ll/js/utils.js?version=1.6.1"></script><script src="/crazy_ll/js/fancybox.js?version=1.6.1"></script><script src="/crazy_ll/js/sidebar.js?version=1.6.1"></script><script src="/crazy_ll/js/copy.js?version=1.6.1"></script><script src="/crazy_ll/js/fireworks.js?version=1.6.1"></script><script src="/crazy_ll/js/transition.js?version=1.6.1"></script><script src="/crazy_ll/js/scroll.js?version=1.6.1"></script><script src="/crazy_ll/js/head.js?version=1.6.1"></script><script src="/crazy_ll/js/search/local-search.js"></script><script>if(/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
+  $('#nav').addClass('is-mobile')
+  $('footer').addClass('is-mobile')
+}</script><div class="search-dialog" id="local-search"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章"></div></div></div><hr><div id="local-search-results"><div id="local-hits"></div><div id="local-stats"><div class="local-search-stats__hr" id="hr"><span>由</span> <a href="https://github.com/wzpan/hexo-generator-search" style="color:#49B1F5;">hexo-generator-search</a>
+ <span>提供支持</span></div></div></div><span class="search-close-button"><i class="fa fa-times"></i></span></div><div class="search-mask"></div></body></html>
