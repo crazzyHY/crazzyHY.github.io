@@ -7,7 +7,7 @@
     error: '复制错误',
     noSupport: '浏览器不支持'
   }
-} </script></head><body><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="toggle-sidebar-info text-center"><span data-toggle="切换文章详情">切换站点概览</span><hr></div><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar"></div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#MySQL语句锁分析"><span class="toc-number">1.</span> <span class="toc-text">MySQL语句锁分析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#锁"><span class="toc-number">1.1.</span> <span class="toc-text">锁</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Read-Committed和Read-Uncommitted"><span class="toc-number">1.2.</span> <span class="toc-text">Read Committed和Read Uncommitted</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#对主键进行等值查询"><span class="toc-number">1.2.1.</span> <span class="toc-text">对主键进行等值查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对主键进行等值匹配后的修改或者删除"><span class="toc-number">1.2.2.</span> <span class="toc-text">对主键进行等值匹配后的修改或者删除</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对主键进行范围匹配"><span class="toc-number">1.2.3.</span> <span class="toc-text">对主键进行范围匹配</span></a></li></ol></li></ol></li></ol></div></div><div class="author-info hide"><div class="author-info__avatar text-center"><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164931.png"></div><div class="author-info__name text-center">HY</div><div class="author-info__description text-center">代码挖掘机</div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/crazy_ll/archives"><span class="pull-left">文章</span><span class="pull-right">15</span></a><a class="author-info-articles__tags article-meta" href="/crazy_ll/tags"><span class="pull-left">标签</span><span class="pull-right">3</span></a><a class="author-info-articles__categories article-meta" href="/crazy_ll/categories"><span class="pull-left">分类</span><span class="pull-right">4</span></a></div></div></div><div id="content-outer"><div id="top-container" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/crazy_ll/">HY'S 代码挖掘站</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page social-icon search"><i class="fa fa-search"></i><span> 搜索</span></a><a class="site-page" href="/">主页</a><a class="site-page" href="/archives">归档</a><a class="site-page" href="/tags">标签</a><a class="site-page" href="/categories">分类</a><a class="site-page" href="/comment">留言板</a></span></div><div id="post-info"><div id="post-title">MySQL锁分析（read uncommitted/read committed）</div><div id="post-meta"><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-10-27</time><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/crazy_ll/categories/MySQL/">MySQL</a></div></div></div><div class="layout" id="content-inner"><article id="post"><div class="article-container" id="post-content"><h1 id="MySQL语句锁分析"><a href="#MySQL语句锁分析" class="headerlink" title="MySQL语句锁分析"></a>MySQL语句锁分析</h1><p>先直接来康康一个sql执行情况</p>
+} </script></head><body><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="toggle-sidebar-info text-center"><span data-toggle="切换文章详情">切换站点概览</span><hr></div><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar"></div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#MySQL语句锁分析"><span class="toc-number">1.</span> <span class="toc-text">MySQL语句锁分析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#锁"><span class="toc-number">1.1.</span> <span class="toc-text">锁</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Read-Committed和Read-Uncommitted"><span class="toc-number">1.2.</span> <span class="toc-text">Read Committed和Read Uncommitted</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#对主键进行等值查询"><span class="toc-number">1.2.1.</span> <span class="toc-text">对主键进行等值查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对主键进行等值匹配后的修改或者删除"><span class="toc-number">1.2.2.</span> <span class="toc-text">对主键进行等值匹配后的修改或者删除</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对主键进行范围匹配"><span class="toc-number">1.2.3.</span> <span class="toc-text">对主键进行范围匹配</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对二级索引进行等值查询"><span class="toc-number">1.2.4.</span> <span class="toc-text">对二级索引进行等值查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对二级索引的范围查询"><span class="toc-number">1.2.5.</span> <span class="toc-text">对二级索引的范围查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DELETE语句"><span class="toc-number">1.2.6.</span> <span class="toc-text">DELETE语句</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#全表扫描"><span class="toc-number">1.2.7.</span> <span class="toc-text">全表扫描</span></a></li></ol></li></ol></li></ol></div></div><div class="author-info hide"><div class="author-info__avatar text-center"><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164931.png"></div><div class="author-info__name text-center">HY</div><div class="author-info__description text-center">代码挖掘机</div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/crazy_ll/archives"><span class="pull-left">文章</span><span class="pull-right">15</span></a><a class="author-info-articles__tags article-meta" href="/crazy_ll/tags"><span class="pull-left">标签</span><span class="pull-right">3</span></a><a class="author-info-articles__categories article-meta" href="/crazy_ll/categories"><span class="pull-left">分类</span><span class="pull-right">4</span></a></div></div></div><div id="content-outer"><div id="top-container" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/crazy_ll/">HY'S 代码挖掘站</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page social-icon search"><i class="fa fa-search"></i><span> 搜索</span></a><a class="site-page" href="/">主页</a><a class="site-page" href="/archives">归档</a><a class="site-page" href="/tags">标签</a><a class="site-page" href="/categories">分类</a><a class="site-page" href="/comment">留言板</a></span></div><div id="post-info"><div id="post-title">MySQL锁分析（read uncommitted/read committed）</div><div id="post-meta"><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-10-27</time><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/crazy_ll/categories/MySQL/">MySQL</a></div></div></div><div class="layout" id="content-inner"><article id="post"><div class="article-container" id="post-content"><h1 id="MySQL语句锁分析"><a href="#MySQL语句锁分析" class="headerlink" title="MySQL语句锁分析"></a>MySQL语句锁分析</h1><p>先直接来康康一个sql执行情况</p>
 <p>现在有一个表<code>t1</code>，是长这样的，<code>m1</code>是主键，<code>n1</code>是二级非唯一索引，事务隔离级别为<code>RR</code></p>
 <p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191027174412.png" alt></p>
 <p>然后现在有事务T1，先执行以下sql，并且没有提交事务</p>
@@ -42,7 +42,8 @@
 <h2 id="锁"><a href="#锁" class="headerlink" title="锁"></a>锁</h2><p>在不同的隔离级别下面，锁的方式也是不同的，加锁的目的，<strong>就是为了解决脏读，不可重复读，幻读这些问题的</strong>，所以从避免这些问题的角度上去考虑就可以了。</p>
 <p><strong>MySQL是在索引上进行加锁的</strong></p>
 <h2 id="Read-Committed和Read-Uncommitted"><a href="#Read-Committed和Read-Uncommitted" class="headerlink" title="Read Committed和Read Uncommitted"></a>Read Committed和Read Uncommitted</h2><p>sql语句执行涉及到的索引不同也会有不同的加锁过程</p>
-<h3 id="对主键进行等值查询"><a href="#对主键进行等值查询" class="headerlink" title="对主键进行等值查询"></a>对主键进行等值查询</h3><p>还是上面的那个</p>
+<h3 id="对主键进行等值查询"><a href="#对主键进行等值查询" class="headerlink" title="对主键进行等值查询"></a>对主键进行等值查询</h3><hr>
+<p>还是上面的那个</p>
 <p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191027214106.png" alt></p>
 <p>这时候执行一条sql</p>
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">where</span> m1=<span class="number">20</span>;</span><br><span class="line"><span class="keyword">commit</span>;</span><br></pre></td></tr></table></figure>
@@ -53,7 +54,8 @@
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">where</span> m1=<span class="number">20</span> <span class="keyword">lock</span> <span class="keyword">in</span> <span class="keyword">share</span> <span class="keyword">mode</span>;</span><br><span class="line"><span class="comment">#或者</span></span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">where</span> m1=<span class="number">20</span> <span class="keyword">for</span> <span class="keyword">update</span>;</span><br><span class="line"><span class="keyword">commit</span>;</span><br></pre></td></tr></table></figure>
 
 <p>由于是对聚簇索引的访问，所以只需要在聚簇索引上加锁就可以了，所以这两条语句在执行的时候，先在这个<code>t1</code>表上加了一个<code>IS意向锁</code>或者<code>IX意向锁</code>，然后在具体的行上面，加上对应的<code>S锁</code>或者<code>X锁</code>，表锁和行锁</p>
-<h3 id="对主键进行等值匹配后的修改或者删除"><a href="#对主键进行等值匹配后的修改或者删除" class="headerlink" title="对主键进行等值匹配后的修改或者删除"></a>对主键进行等值匹配后的修改或者删除</h3><p>比如</p>
+<h3 id="对主键进行等值匹配后的修改或者删除"><a href="#对主键进行等值匹配后的修改或者删除" class="headerlink" title="对主键进行等值匹配后的修改或者删除"></a>对主键进行等值匹配后的修改或者删除</h3><hr>
+<p>比如</p>
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">update</span> t1 <span class="keyword">set</span> n1=<span class="string">'f'</span> <span class="keyword">where</span> m1=<span class="number">30</span>;<span class="comment">#1</span></span><br></pre></td></tr></table></figure>
 
 <p>我们这个表里面，<code>n1</code>是二级索引</p>
@@ -71,7 +73,8 @@
 <figure class="highlight n1ql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">delete</span> <span class="keyword">from</span> t1 <span class="keyword">where</span> m1=<span class="number">30</span>;</span><br></pre></td></tr></table></figure>
 
 <p>删除的话肯定是要<code>m1=30</code>的这条记录的所有信息都消失，所以二级索引肯定也要删，那么加锁也是和上面的一样的，先在主键上加锁，然后再到二级索引加锁，其实从临界资源并发的处理角度思考就可以了</p>
-<h3 id="对主键进行范围匹配"><a href="#对主键进行范围匹配" class="headerlink" title="对主键进行范围匹配"></a>对主键进行范围匹配</h3><p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191027214106.png" alt></p>
+<h3 id="对主键进行范围匹配"><a href="#对主键进行范围匹配" class="headerlink" title="对主键进行范围匹配"></a>对主键进行范围匹配</h3><hr>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191027214106.png" alt></p>
 <p>比如</p>
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">where</span> m1&lt;<span class="number">5</span> <span class="keyword">for</span> <span class="keyword">update</span>; <span class="comment">#1</span></span><br></pre></td></tr></table></figure>
 
@@ -82,6 +85,66 @@
 
 <p>然后先执行这条<code>sql#2</code>再执行这条<code>sql#1</code>以后，结果是这样的</p>
 <p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191030092739.png" alt></p>
+<h3 id="对二级索引进行等值查询"><a href="#对二级索引进行等值查询" class="headerlink" title="对二级索引进行等值查询"></a>对二级索引进行等值查询</h3><hr>
+<p>还是上面的表</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191030103623.png" alt></p>
+<p>比如执行</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="comment">#indx_2就是这条n1的普通二级索引</span></span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">force</span> <span class="keyword">index</span>(indx_2) <span class="keyword">where</span> n1=<span class="string">'b'</span> <span class="keyword">for</span> <span class="keyword">update</span>;</span><br></pre></td></tr></table></figure>
+
+<p>由于优化器成本的选择，在这点数据的情况下是直接扫表的，所以通过制定索引来执行这条sql</p>
+<p>这个和上面主键的等值查询类似，然后<strong>锁是加在索引上的</strong>，所以很容易知道</p>
+<ul>
+<li><p>通过二级索引查询到对应主键，锁住</p>
+</li>
+<li><p>回表到聚簇索引，锁住</p>
+<p>看到这，我就有俩问题了</p>
+</li>
+</ul>
+<ol>
+<li>这不用锁住<code>n1=c</code>的数据么？这里是怎么操作的？</li>
+<li>这里顺序获取锁，那会不会出现死锁啊？</li>
+</ol>
+<p>答：</p>
+<ol>
+<li>对于等值匹配查询，是在存储引擎加锁前判断条件的，所以不会出现锁住其他行的情况</li>
+<li>会出现，的确会出现死锁</li>
+</ol>
+<p>比如执行这个</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">update</span> t1 <span class="keyword">set</span> n1=<span class="string">'f'</span> <span class="keyword">where</span> m1=<span class="number">3</span>;</span><br></pre></td></tr></table></figure>
+
+<p>这条sql是先获取聚簇索引上的锁，再获取二级索引的锁的，如果同时出现这两条sql，那么就很可能会出现死锁了，这就必须得要回滚一个事务了</p>
+<h3 id="对二级索引的范围查询"><a href="#对二级索引的范围查询" class="headerlink" title="对二级索引的范围查询"></a>对二级索引的范围查询</h3><p>现在表变成这样</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191030134511.png" alt></p>
+<p>执行下面的sql</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">force</span> <span class="keyword">index</span>(indx_2) <span class="keyword">where</span> n1&lt;<span class="string">'b'</span> <span class="keyword">for</span> <span class="keyword">update</span>;</span><br></pre></td></tr></table></figure>
+
+<p>来看看执行计划先</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191030173605.png" alt></p>
+<p>这里出现了<code>Using index condition</code>，就是用到了<code>索引条件下推</code>，这个下推主要是为了减少查询的数据量，然后也减少了回表时候的随机io，所以对于聚簇索引中的<code>select</code>并没有<code>索引条件下推</code></p>
+<p>假设现在的where条件是<code>where n1&lt;&#39;b&#39; and n1 like &#39;%c%&#39;</code></p>
+<p><strong>那没有下推的时候是怎么查的？</strong></p>
+<ol>
+<li>先通过<code>n1&lt;&#39;b&#39;</code>查询到二级索引</li>
+<li>回表，查询聚簇索引，然后返回<code>server</code>层</li>
+<li><code>server</code>层会去判断是不是符合条件，就是这个条件<code>n1 like &#39;%c%&#39;</code></li>
+<li>然后继续重复下一条查询</li>
+</ol>
+<p>回表是一条条回的，回了提交然后执行下一条</p>
+<p>如果有<code>索引条件下推</code>，那么上面第3步的判断就会放在<code>存储引擎</code>去判断，直接在二级索引查询的时候就过滤掉不需要的数据，减少回表的数据，二级索引回表，对应主键的页可能不是连续的，会产生比较多的随机io，所以这个<code>索引条件下推</code>就优化了不少</p>
+<p>然后这条sql和上面的等值类似，先锁定了二级索引，然后锁定了聚簇索引</p>
+<p>在上面这条sql没有提交的时候，执行如下的语句</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">force</span> <span class="keyword">index</span>(indx_2) <span class="keyword">where</span> n1=<span class="string">'b'</span> <span class="keyword">for</span> <span class="keyword">update</span>;</span><br></pre></td></tr></table></figure>
+
+<p>会出现什么情况</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191030180258.png" alt></p>
+<p>执行了以后发现这条sql会被一直阻塞，<strong>其实，在上面的索引下推的时候，获取到了二级索引的锁，并且判断后，如果不符合条件，就会跳过或者返回<code>server</code>查询结束，并没有将对应的锁给释放</strong>，那聚簇索引真的没被锁么？</p>
+<p><strong>是的，真的没有</strong></p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191030180823.png" alt></p>
+<p>通过主键查询的时候，并没有被阻塞，直接返回的结果</p>
+<h3 id="DELETE语句"><a href="#DELETE语句" class="headerlink" title="DELETE语句"></a>DELETE语句</h3><hr>
+<p>对于<code>DELETE</code>来说，其实和<code>UPDATE</code>是一样的</p>
+<h3 id="全表扫描"><a href="#全表扫描" class="headerlink" title="全表扫描"></a>全表扫描</h3><hr>
+<p>全表扫描加锁其实就和上面说的没有<code>索引条件下推</code>的处理是一样的，先加锁然后返回到<code>server</code>去判断是不是符合条件，不符合就释放锁</p>
 </div></article><div class="post-meta__tag-list"><a class="post-meta__tags" href="/crazy_ll/tags/基础/">基础</a></div><nav id="pagination"><div class="next-post pull-right"><a href="/crazy_ll/2019/10/15/MySQL/MVCC/"><span>MVCC</span><i class="fa fa-chevron-right"></i></a></div></nav><div id="vcomment"></div><script src="https://cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js"></script><script>var notify = 'true' == true ? true : false;
 var verify = 'false' == true ? true : false;
 var GUEST_INFO = ['nick','mail','link'];
