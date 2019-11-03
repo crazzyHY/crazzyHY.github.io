@@ -85,6 +85,9 @@
 
 <p>然后先执行这条<code>sql#2</code>再执行这条<code>sql#1</code>以后，结果是这样的</p>
 <p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191030092739.png" alt></p>
+<p>为什么会锁住这条<code>m1=5</code>的记录呢？</p>
+<p>从写代码的角度来思考，在帅选条件的时候，我们肯定是需要查询到<code>m1=5</code>的这条记录的，前面也说到，在<strong>等值匹配查询</strong>的时候，如果是需要加锁的语句，会先判断条件，然后再加锁，那么在<strong>范围查询</strong>的时候是什么样的？</p>
+<p>先加锁，然后再判断是否符合条件，那么由于只是对主键进行查询，所以没有<code>索引条件下推</code>（主要是为了减少随机io，并且在聚簇索引的查询是不需要的），那么对于没有进行<code>索引条件下推</code>查询出的结果，会返回到<code>server</code>层去再次做条件判断，那么此时其实并没有释放<code>m1=5</code>这条记录上面的<code>X锁</code>，所以导致了上面的这种情况</p>
 <h3 id="对二级索引进行等值查询"><a href="#对二级索引进行等值查询" class="headerlink" title="对二级索引进行等值查询"></a>对二级索引进行等值查询</h3><hr>
 <p>还是上面的表</p>
 <p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191030103623.png" alt></p>
