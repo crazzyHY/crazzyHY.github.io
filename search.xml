@@ -4,6 +4,31 @@
   
     
     <entry>
+      <title>MySQL锁分析（repeatable read）</title>
+      <link href="/crazy_ll/2019/11/19/Mysql%E8%AF%AD%E5%8F%A5%E9%94%81%E5%88%86%E6%9E%90%EF%BC%88repeatable%20read%EF%BC%89/"/>
+      <url>/crazy_ll/2019/11/19/Mysql%E8%AF%AD%E5%8F%A5%E9%94%81%E5%88%86%E6%9E%90%EF%BC%88repeatable%20read%EF%BC%89/</url>
+      
+        <content type="html"><![CDATA[<h1 id="MySQL语句锁分析"><a href="#MySQL语句锁分析" class="headerlink" title="MySQL语句锁分析"></a>MySQL语句锁分析</h1><p>首先来看一下表结构是什么样子的</p><p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20191120000246.png" alt></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> MySQL </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 基础 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>MySQL锁分析（read uncommitted/read committed）</title>
       <link href="/crazy_ll/2019/10/27/MySQL/MySQL%E9%94%81%E5%88%86%E6%9E%90%EF%BC%88read%20uncommittedread%20committed%EF%BC%89/"/>
       <url>/crazy_ll/2019/10/27/MySQL/MySQL%E9%94%81%E5%88%86%E6%9E%90%EF%BC%88read%20uncommittedread%20committed%EF%BC%89/</url>
