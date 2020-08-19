@@ -240,7 +240,7 @@
 <p>控制台得到这样的结果</p>
 <p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200819205747.png" srcset="/crazy_ll/img/loading.gif" alt></p>
 <p>上面输出内容中，前8个字节就是<code>Mark Word</code>，后4个字节是类型指针，是个4字节的地址信息，然后剩下的4字节就是实例数据，<code>int</code>类型是4个字节，由于当前字节数已经是8的倍数了，所以不存在<code>对其填充的字节</code></p>
-<h2 id="通过jvm源码观察Mark-Word组成"><a href="#通过jvm源码观察Mark-Word组成" class="headerlink" title="通过jvm源码观察Mark Word组成"></a>通过jvm源码观察Mark Word组成</h2><p><code>Mark Word</code>在<code>jvm</code>源码中，对应的<code>c++</code>类为<code>markoop.hpp</code>，截取其组成</p>
+<h3 id="通过jvm源码观察Mark-Word组成"><a href="#通过jvm源码观察Mark-Word组成" class="headerlink" title="通过jvm源码观察Mark Word组成"></a>通过jvm源码观察Mark Word组成</h3><p><code>Mark Word</code>在<code>jvm</code>源码中，对应的<code>c++</code>类为<code>markoop.hpp</code>，截取其组成</p>
 <pre><code class="hljs c++"><span class="hljs-number">64</span> bits:
 --------
 unused:<span class="hljs-number">25</span> hash:<span class="hljs-number">31</span> --&gt;| unused:<span class="hljs-number">1</span>   age:<span class="hljs-number">4</span>    biased_lock:<span class="hljs-number">1</span> lock:<span class="hljs-number">2</span> (normal object)
