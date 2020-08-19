@@ -1,26 +1,321 @@
-<!DOCTYPE html><html lang="zh-Hans"><head><meta name="generator" content="Hexo 3.9.0"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta name="description" content="synchronized关键字底层理解"><meta name="keywords" content="基础"><meta name="author" content="HY"><meta name="copyright" content="HY"><title>synchronized关键字底层理解 | HY'S 代码挖掘站</title><link rel="shortcut icon" href="/crazy_ll/melody-favicon.ico"><link rel="stylesheet" href="/crazy_ll/css/index.css?version=1.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@latest/css/font-awesome.min.css?version=1.6.1"><link rel="dns-prefetch" href="https://cdn.staticfile.org"><link rel="dns-prefetch" href="https://cdn.bootcss.com"><link rel="dns-prefetch" href="https://creativecommons.org"><script>var GLOBAL_CONFIG = { 
-  root: '/crazy_ll/',
-  algolia: undefined,
-  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容:${query}"}},
-  copy: {
-    success: '复制成功',
-    error: '复制错误',
-    noSupport: '浏览器不支持'
-  }
-} </script></head><body><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="toggle-sidebar-info text-center"><span data-toggle="切换文章详情">切换站点概览</span><hr></div><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar"></div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Synchronized"><span class="toc-number">1.</span> <span class="toc-text">Synchronized</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#示例代码"><span class="toc-number">1.1.</span> <span class="toc-text">示例代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#字节码"><span class="toc-number">1.2.</span> <span class="toc-text">字节码</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#静态方法do1"><span class="toc-number">1.2.1.</span> <span class="toc-text">静态方法do1()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#方法d02"><span class="toc-number">1.2.2.</span> <span class="toc-text">方法d02()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#方法do3"><span class="toc-number">1.2.3.</span> <span class="toc-text">方法do3()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#字节码结构简单介绍"><span class="toc-number">1.2.4.</span> <span class="toc-text">字节码结构简单介绍</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#descriptor"><span class="toc-number">1.2.4.1.</span> <span class="toc-text">descriptor</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#flags"><span class="toc-number">1.2.4.2.</span> <span class="toc-text">flags</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#指令部分"><span class="toc-number">1.2.4.3.</span> <span class="toc-text">指令部分</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#JVM执行上述字节码的入口"><span class="toc-number">1.2.5.</span> <span class="toc-text">JVM执行上述字节码的入口</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#BytecodeInterpreter（字节码解释器）源码"><span class="toc-number">1.3.</span> <span class="toc-text">BytecodeInterpreter（字节码解释器）源码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">1.4.</span> <span class="toc-text">总结</span></a></li></ol></li></ol></div></div><div class="author-info hide"><div class="author-info__avatar text-center"><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164931.png"></div><div class="author-info__name text-center">HY</div><div class="author-info__description text-center">代码挖掘机</div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/crazy_ll/archives"><span class="pull-left">文章</span><span class="pull-right">20</span></a><a class="author-info-articles__tags article-meta" href="/crazy_ll/tags"><span class="pull-left">标签</span><span class="pull-right">4</span></a><a class="author-info-articles__categories article-meta" href="/crazy_ll/categories"><span class="pull-left">分类</span><span class="pull-right">6</span></a></div></div></div><div id="content-outer"><div id="top-container" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/crazy_ll/">HY'S 代码挖掘站</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page social-icon search"><i class="fa fa-search"></i><span> 搜索</span></a><a class="site-page" href="/">主页</a><a class="site-page" href="/archives">归档</a><a class="site-page" href="/tags">标签</a><a class="site-page" href="/categories">分类</a><a class="site-page" href="/comment">留言板</a></span></div><div id="post-info"><div id="post-title">synchronized关键字底层理解</div><div id="post-meta"><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2020-07-28</time><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/crazy_ll/categories/java基础/">java基础</a></div></div></div><div class="layout" id="content-inner"><article id="post"><div class="article-container" id="post-content"><h1 id="Synchronized"><a href="#Synchronized" class="headerlink" title="Synchronized"></a>Synchronized</h1><p><code>synchronized</code>是一个很熟悉的东西，都知道怎么用，但是到底是怎么实现的其实可能没有认为的那么熟悉，所以从表面到底层，分析一下字节码以及<code>JVM</code>中<code>C++</code>源码，来看看这个锁的实现。</p>
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/crazy_ll/img/favicon.png">
+  <link rel="icon" type="image/png" href="/crazy_ll/img/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="代码挖掘机">
+  <meta name="author" content="HY">
+  <meta name="keywords" content>
+  <title>synchronized关键字底层理解 - HY&#39;S 代码挖掘站</title>
+
+  <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/4.4.1/css/bootstrap.min.css">
+
+
+  <link rel="stylesheet" href="https://cdn.staticfile.org/github-markdown-css/4.0.0/github-markdown.min.css">
+  <link rel="stylesheet" href="/crazy_ll/lib/hint/hint.min.css">
+
+  
+    
+    <link rel="stylesheet" href="https://cdn.staticfile.org/highlight.js/10.0.0/styles/github-gist.min.css">
+  
+
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_6peoq002giu.css">
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_pjno9b9zyxs.css">
+
+<link rel="stylesheet" href="/crazy_ll/css/main.css">
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script src="/crazy_ll/js/utils.js"></script>
+  <script src="/crazy_ll/js/color-schema.js"></script>
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/crazy_ll/">&nbsp;<strong>代码🔍</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner intro-2" id="background" parallax=true
+         style="background: url('/crazy_ll/img/default.png') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="container page-header text-center fade-in-up">
+            <span class="h2" id="subtitle">
+              
+            </span>
+
+            
+              
+  <div class="mt-3 post-meta">
+    <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+    <time datetime="2020-07-28 00:00" pubdate>
+      2020年7月28日 凌晨
+    </time>
+  </div>
+
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      1.7k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      23
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-md">
+      <div class="container nopadding-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto" id="post">
+            <!-- SEO header -->
+            <h1 style="display: none">synchronized关键字底层理解</h1>
+            
+            <div class="markdown-body" id="post-body">
+              <h1 id="Synchronized"><a href="#Synchronized" class="headerlink" title="Synchronized"></a>Synchronized</h1><p><code>synchronized</code>是一个很熟悉的东西，都知道怎么用，但是到底是怎么实现的其实可能没有认为的那么熟悉，所以从表面到底层，分析一下字节码以及<code>JVM</code>中<code>C++</code>源码，来看看这个锁的实现。</p>
 <p>先来看看<code>Java</code>中<code>Synchronized</code>是怎么实现的</p>
 <h2 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h2><p>直接上代码</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TestSynchronized</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] lock = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">do1</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">do2</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="number">2</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">do3</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (lock) &#123;</span><br><span class="line">            System.out.println(<span class="number">3</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TestSynchronized</span> </span>&#123;
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">byte</span>[] lock = <span class="hljs-keyword">new</span> <span class="hljs-keyword">byte</span>[<span class="hljs-number">0</span>];
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">do1</span><span class="hljs-params">()</span> </span>&#123;
+        System.out.println(<span class="hljs-number">1</span>);
+    &#125;
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">void</span> <span class="hljs-title">do2</span><span class="hljs-params">()</span> </span>&#123;
+        System.out.println(<span class="hljs-number">2</span>);
+    &#125;
+
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">do3</span><span class="hljs-params">()</span> </span>&#123;
+        <span class="hljs-keyword">synchronized</span> (lock) &#123;
+            System.out.println(<span class="hljs-number">3</span>);
+        &#125;
+    &#125;
+&#125;</code></pre>
 
 <p>这是<code>synchronized</code>在不同位置时的代码，在不同位置锁定的对象也是不同的，分别是锁定了当前<code>TestSynchronized</code>类，<code>TestSynchronized</code>实例对象，<code>private final byte[] lock = new byte[0];</code>对象。</p>
 <h2 id="字节码"><a href="#字节码" class="headerlink" title="字节码"></a>字节码</h2><p>省略了常量池部分字节码，只保留了方法，需要查看完整字节码可以使用命令<code>javap -verbose TestSynchronized.class</code>来查看。</p>
-<h3 id="静态方法do1"><a href="#静态方法do1" class="headerlink" title="静态方法do1()"></a>静态方法<code>do1()</code></h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">do1</span><span class="params">()</span></span>;</span><br><span class="line"><span class="comment">//方法的入参和返回值类型</span></span><br><span class="line">  descriptor: ()V </span><br><span class="line">  <span class="comment">//访问标志</span></span><br><span class="line">  flags: ACC_PUBLIC, ACC_STATIC, ACC_SYNCHRONIZED</span><br><span class="line">  Code:</span><br><span class="line">	<span class="comment">//栈深度=2，局部变量表数量=0，方法参数数量=0</span></span><br><span class="line">    stack=<span class="number">2</span>, locals=<span class="number">0</span>, args_size=<span class="number">0</span></span><br><span class="line">       0: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;</span><br><span class="line">       <span class="number">3</span>: iconst_1</span><br><span class="line">       4: invokevirtual #4                  // Method java/io/PrintStream.println:(I)V</span><br><span class="line">       <span class="number">7</span>: <span class="keyword">return</span></span><br><span class="line">    LineNumberTable:</span><br><span class="line">      line <span class="number">12</span>: <span class="number">0</span></span><br><span class="line">      line <span class="number">13</span>: <span class="number">7</span></span><br></pre></td></tr></table></figure>
+<h3 id="静态方法do1"><a href="#静态方法do1" class="headerlink" title="静态方法do1()"></a>静态方法<code>do1()</code></h3><pre><code class="hljs java">public static synchronized void do1();
+//方法的入参和返回值类型
+  descriptor: ()V 
+  //访问标志
+  flags: ACC_PUBLIC, ACC_STATIC, ACC_SYNCHRONIZED
+  Code:
+	//栈深度=2，局部变量表数量=0，方法参数数量=0
+    stack=2, locals=0, args_size=0
+       0: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+       3: iconst_1
+       4: invokevirtual #4                  // Method java/io/PrintStream.println:(I)V
+       7: return
+    LineNumberTable:
+      line 12: 0
+      line 13: 7</code></pre>
 
 <a id="more"></a>
 
-<h3 id="方法d02"><a href="#方法d02" class="headerlink" title="方法d02()"></a>方法<code>d02()</code></h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">do2</span><span class="params">()</span></span>;</span><br><span class="line">    descriptor: ()V</span><br><span class="line">    flags: ACC_PUBLIC, ACC_SYNCHRONIZED</span><br><span class="line">    Code:</span><br><span class="line">      stack=<span class="number">2</span>, locals=<span class="number">1</span>, args_size=<span class="number">1</span></span><br><span class="line">         0: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;</span><br><span class="line">         <span class="number">3</span>: iconst_2</span><br><span class="line">         4: invokevirtual #4                  // Method java/io/PrintStream.println:(I)V</span><br><span class="line">         <span class="number">7</span>: <span class="keyword">return</span></span><br><span class="line">      LineNumberTable:</span><br><span class="line">        line <span class="number">16</span>: <span class="number">0</span></span><br><span class="line">        line <span class="number">17</span>: <span class="number">7</span></span><br><span class="line">      LocalVariableTable:</span><br><span class="line">        Start  Length  Slot  Name   Signature</span><br><span class="line">            <span class="number">0</span>       <span class="number">8</span>     <span class="number">0</span>  <span class="keyword">this</span>   LTestSynchronized;</span><br></pre></td></tr></table></figure>
+<h3 id="方法d02"><a href="#方法d02" class="headerlink" title="方法d02()"></a>方法<code>d02()</code></h3><pre><code class="hljs java">public synchronized void do2();
+    descriptor: ()V
+    flags: ACC_PUBLIC, ACC_SYNCHRONIZED
+    Code:
+      stack=2, locals=1, args_size=1
+         0: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+         3: iconst_2
+         4: invokevirtual #4                  // Method java/io/PrintStream.println:(I)V
+         7: return
+      LineNumberTable:
+        line 16: 0
+        line 17: 7
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       8     0  this   LTestSynchronized;</code></pre>
 
-<h3 id="方法do3"><a href="#方法do3" class="headerlink" title="方法do3()"></a>方法<code>do3()</code></h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">do3</span><span class="params">()</span></span>;</span><br><span class="line">    descriptor: ()V</span><br><span class="line">    flags: ACC_PUBLIC</span><br><span class="line">    Code:</span><br><span class="line">      stack=<span class="number">2</span>, locals=<span class="number">3</span>, args_size=<span class="number">1</span></span><br><span class="line">         <span class="number">0</span>: aload_0</span><br><span class="line">         1: getfield      #2                  // Field lock:[B</span><br><span class="line">         <span class="number">4</span>: dup</span><br><span class="line">         <span class="number">5</span>: astore_1</span><br><span class="line">         <span class="number">6</span>: monitorenter</span><br><span class="line">         7: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;</span><br><span class="line">        <span class="number">10</span>: iconst_3</span><br><span class="line">        11: invokevirtual #4                  // Method java/io/PrintStream.println:(I)V</span><br><span class="line">        14: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;</span><br><span class="line">        <span class="number">17</span>: aload_0</span><br><span class="line">        18: getfield      #2                  // Field lock:[B</span><br><span class="line">        21: invokestatic  #5                  // Method org/openjdk/jol/info/ClassLayout.parseInstance:(Ljava/lang/Object;)Lorg/openjdk/jol/info/ClassLayout;</span><br><span class="line">        24: invokevirtual #6                  // Method org/openjdk/jol/info/ClassLayout.toPrintable:()Ljava/lang/String;</span><br><span class="line">        27: invokevirtual #7                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V</span><br><span class="line">        <span class="number">30</span>: aload_1</span><br><span class="line">        <span class="number">31</span>: monitorexit</span><br><span class="line">        <span class="number">32</span>: goto          <span class="number">40</span></span><br><span class="line">        <span class="number">35</span>: astore_2</span><br><span class="line">        <span class="number">36</span>: aload_1</span><br><span class="line">        <span class="number">37</span>: monitorexit</span><br><span class="line">        <span class="number">38</span>: aload_2</span><br><span class="line">        <span class="number">39</span>: athrow</span><br><span class="line">        <span class="number">40</span>: <span class="keyword">return</span></span><br><span class="line">      Exception table:</span><br><span class="line">         from    to  target type</span><br><span class="line">             <span class="number">7</span>    <span class="number">32</span>    <span class="number">35</span>   any</span><br><span class="line">            <span class="number">35</span>    <span class="number">38</span>    <span class="number">35</span>   any</span><br><span class="line">      LineNumberTable:</span><br><span class="line">        line <span class="number">21</span>: <span class="number">0</span></span><br><span class="line">        line <span class="number">22</span>: <span class="number">7</span></span><br><span class="line">        line <span class="number">23</span>: <span class="number">14</span></span><br><span class="line">        line <span class="number">24</span>: <span class="number">30</span></span><br><span class="line">        line <span class="number">25</span>: <span class="number">40</span></span><br><span class="line">      LocalVariableTable:</span><br><span class="line">        Start  Length  Slot  Name   Signature</span><br><span class="line">            <span class="number">0</span>      <span class="number">41</span>     <span class="number">0</span>  <span class="keyword">this</span>   LTestSynchronized;</span><br><span class="line">      StackMapTable: number_of_entries = <span class="number">2</span></span><br><span class="line">        frame_type = <span class="number">255</span> <span class="comment">/* full_frame */</span></span><br><span class="line">          offset_delta = <span class="number">35</span></span><br><span class="line">          locals = [ class TestSynchronized, class java/lang/Object ]</span><br><span class="line">          stack = [ class java/lang/Throwable ]</span><br><span class="line">        frame_type = <span class="number">250</span> <span class="comment">/* chop */</span></span><br><span class="line">          offset_delta = <span class="number">4</span></span><br></pre></td></tr></table></figure>
+<h3 id="方法do3"><a href="#方法do3" class="headerlink" title="方法do3()"></a>方法<code>do3()</code></h3><pre><code class="hljs java">public void do3();
+    descriptor: ()V
+    flags: ACC_PUBLIC
+    Code:
+      stack=2, locals=3, args_size=1
+         0: aload_0
+         1: getfield      #2                  // Field lock:[B
+         4: dup
+         5: astore_1
+         6: monitorenter
+         7: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        10: iconst_3
+        11: invokevirtual #4                  // Method java/io/PrintStream.println:(I)V
+        14: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        17: aload_0
+        18: getfield      #2                  // Field lock:[B
+        21: invokestatic  #5                  // Method org/openjdk/jol/info/ClassLayout.parseInstance:(Ljava/lang/Object;)Lorg/openjdk/jol/info/ClassLayout;
+        24: invokevirtual #6                  // Method org/openjdk/jol/info/ClassLayout.toPrintable:()Ljava/lang/String;
+        27: invokevirtual #7                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+        30: aload_1
+        31: monitorexit
+        32: goto          40
+        35: astore_2
+        36: aload_1
+        37: monitorexit
+        38: aload_2
+        39: athrow
+        40: return
+      Exception table:
+         from    to  target type
+             7    32    35   any
+            35    38    35   any
+      LineNumberTable:
+        line 21: 0
+        line 22: 7
+        line 23: 14
+        line 24: 30
+        line 25: 40
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      41     0  this   LTestSynchronized;
+      StackMapTable: number_of_entries = 2
+        frame_type = 255 /* full_frame */
+          offset_delta = 35
+          locals = [ class TestSynchronized, class java/lang/Object ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 250 /* chop */
+          offset_delta = 4</code></pre>
 
 <p>简单的对字节码做一些解释，方便理解，不然一堆看起来都不知道是什么东西</p>
 <h3 id="字节码结构简单介绍"><a href="#字节码结构简单介绍" class="headerlink" title="字节码结构简单介绍"></a>字节码结构简单介绍</h3><h4 id="descriptor"><a href="#descriptor" class="headerlink" title="descriptor"></a>descriptor</h4><p>根据虚拟机规范文档中描述，意义如下</p>
@@ -31,22 +326,31 @@
 <p><em>VoidDescriptor:  V</em></p>
 </blockquote>
 <p>方法描述符由<code>参数描述符</code>，<code>返回值描述符</code>组成，而<code>参数描述符</code>又依据<code>成员类型</code>，<code>返回值描述符</code>也是依据<code>成员类型</code>还有<code>空白描述符</code>，<code>空白描述符</code>表示为<code>V</code>，<code>成员类型</code>的组成如下图所示</p>
-<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200727193529.png" alt></p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200727193529.png" srcset="/crazy_ll/img/loading.gif" alt></p>
 <p>很明显，上面字节码的例子中<code>()V</code>的意思就是，入参为空，返回值为<code>void</code></p>
 <p>举个规范中例子</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function">Object <span class="title">m</span><span class="params">(<span class="keyword">int</span> i, <span class="keyword">double</span> d, Thread t)</span> </span>&#123;...&#125;</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs java"><span class="hljs-function">Object <span class="hljs-title">m</span><span class="hljs-params">(<span class="hljs-keyword">int</span> i, <span class="hljs-keyword">double</span> d, Thread t)</span> </span>&#123;...&#125;</code></pre>
 
 <p>对应为</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">(IDLjava/lang/Thread;)Ljava/lang/Object;</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs java">(IDLjava/lang/Thread;)Ljava/lang/Object;</code></pre>
 
 <p>对照上面表就很容易理解了</p>
 <h4 id="flags"><a href="#flags" class="headerlink" title="flags"></a>flags</h4><p>方法的访问标志表示对此方法的访问权限和属性，那么方法上的标志如下图</p>
-<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200727195840.png" alt></p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200727195840.png" srcset="/crazy_ll/img/loading.gif" alt></p>
 <p>里面有一个<code>ACC_SYNCHRONIZED</code>的标志，其实就代表这个方法需要同步</p>
 <h4 id="指令部分"><a href="#指令部分" class="headerlink" title="指令部分"></a>指令部分</h4><p>字节码中的<code>stack</code>代表的是<code>Operand Stacks（操作数栈）</code>的深度，像<code>iconst_1</code>的指令会将常数<code>1</code>压入栈顶</p>
 <p>字节码中的<code>locals</code> 代表的是<code>Local Variables（局部变量）</code>的数量，像<code>getstatic</code>会将后面符号引用的指针压入栈顶</p>
 <p>取<code>do1()</code>方法作为例子</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">Code:</span><br><span class="line">		<span class="comment">//栈深度=2，局部变量表数量=0，方法参数数量=0</span></span><br><span class="line">     stack=<span class="number">2</span>, locals=<span class="number">0</span>, args_size=<span class="number">0</span></span><br><span class="line">        <span class="comment">//获取常量池中符号引用#3的对象并推入栈顶</span></span><br><span class="line">        0: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;</span><br><span class="line">        <span class="comment">//将int类型数值1推入栈顶，现在PrintStream在栈中第二个位置</span></span><br><span class="line">        <span class="number">3</span>: iconst_1</span><br><span class="line">        <span class="comment">// 调用pringln方法 </span></span><br><span class="line">        4: invokevirtual #4                  // Method java/io/PrintStream.println:(I)V</span><br><span class="line">        <span class="number">7</span>: <span class="keyword">return</span></span><br></pre></td></tr></table></figure>
+<pre><code class="hljs java">Code:
+		//栈深度=2，局部变量表数量=0，方法参数数量=0
+     stack=2, locals=0, args_size=0
+        //获取常量池中符号引用#3的对象并推入栈顶
+        0: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        //将int类型数值1推入栈顶，现在PrintStream在栈中第二个位置
+        3: iconst_1
+        // 调用pringln方法 
+        4: invokevirtual #4                  // Method java/io/PrintStream.println:(I)V
+        7: return</code></pre>
 
 <p>具体指令意思就差不多是这样，更详细的内容在<a href="https://docs.oracle.com/javase/specs/jvms/se8/jvms8.pdf" target="_blank" rel="noopener">JVM规范</a></p>
 <h3 id="JVM执行上述字节码的入口"><a href="#JVM执行上述字节码的入口" class="headerlink" title="JVM执行上述字节码的入口"></a>JVM执行上述字节码的入口</h3><p>对于<code>monitorenter</code>的执行入口，网上说的比较多的地方是<code>bytecodeInterpreter.cpp#1816</code>还有就是<code>interpreterRuntime.cpp#608</code>，除了上面指出的代码，还有对<code>monitorenter</code>进行处理的是<code>templateTable_x86_64.cpp#3668</code>，这是<code>JVM</code>的模板解释器实现<code>monitorenter</code>的地方</p>
@@ -57,30 +361,360 @@
 <ul>
 <li><code>ACC_SYNCHRONIZED</code>的具体执行代码</li>
 </ul>
-<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Lock method if synchronized.</span></span><br><span class="line">      <span class="keyword">if</span> (METHOD-&gt;is_synchronized()) &#123;</span><br><span class="line">        <span class="comment">// oop rcvr = locals[0].j.r;</span></span><br><span class="line">        oop rcvr;</span><br><span class="line">        <span class="comment">//此处判断了方法是否是静态方法并做了不同的处理</span></span><br><span class="line">        <span class="keyword">if</span> (METHOD-&gt;is_static()) &#123;</span><br><span class="line">          rcvr = METHOD-&gt;constants()-&gt;pool_holder()-&gt;java_mirror();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">          rcvr = LOCALS_OBJECT(<span class="number">0</span>);</span><br><span class="line">          VERIFY_OOP(rcvr);</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="comment">//省略了很多代码</span></span><br><span class="line">        ...</span><br><span class="line"></span><br><span class="line">          <span class="keyword">if</span> (anticipated_bias_locking_value == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// Already biased towards this thread, nothing to do.</span></span><br><span class="line">            <span class="keyword">if</span> (PrintBiasedLockingStatistics) &#123;</span><br><span class="line">              (* BiasedLocking::biased_lock_entry_count_addr())++;</span><br><span class="line">            &#125;</span><br><span class="line">            success = <span class="literal">true</span>;</span><br><span class="line">          &#125; <span class="keyword">else</span> <span class="keyword">if</span> ((anticipated_bias_locking_value &amp; markOopDesc::biased_lock_mask_in_place) != <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// Try to revoke bias.</span></span><br><span class="line">            markOop header = rcvr-&gt;klass()-&gt;prototype_header();</span><br><span class="line">            <span class="keyword">if</span> (hash != markOopDesc::no_hash) &#123;</span><br><span class="line">              header = header-&gt;copy_set_hash(hash);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (Atomic::cmpxchg_ptr(header, rcvr-&gt;mark_addr(), mark) == mark) &#123;</span><br><span class="line">              <span class="keyword">if</span> (PrintBiasedLockingStatistics)</span><br><span class="line">                (*BiasedLocking::revoked_lock_entry_count_addr())++;</span><br><span class="line">            &#125;</span><br><span class="line">          &#125; <span class="keyword">else</span> <span class="keyword">if</span> ((anticipated_bias_locking_value &amp; epoch_mask_in_place) != <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// Try to rebias.</span></span><br><span class="line">            markOop new_header = (markOop) ( (<span class="keyword">intptr_t</span>) rcvr-&gt;klass()-&gt;prototype_header() | thread_ident);</span><br><span class="line">            <span class="keyword">if</span> (hash != markOopDesc::no_hash) &#123;</span><br><span class="line">              new_header = new_header-&gt;copy_set_hash(hash);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (Atomic::cmpxchg_ptr((<span class="keyword">void</span>*)new_header, rcvr-&gt;mark_addr(), mark) == mark) &#123;</span><br><span class="line">              <span class="keyword">if</span> (PrintBiasedLockingStatistics) &#123;</span><br><span class="line">                (* BiasedLocking::rebiased_lock_entry_count_addr())++;</span><br><span class="line">              &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">              CALL_VM(InterpreterRuntime::monitorenter(THREAD, mon), handle_exception);</span><br><span class="line">            &#125;</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs c++"><span class="hljs-comment">// Lock method if synchronized.</span>
+      <span class="hljs-keyword">if</span> (METHOD-&gt;is_synchronized()) &#123;
+        <span class="hljs-comment">// oop rcvr = locals[0].j.r;</span>
+        oop rcvr;
+        <span class="hljs-comment">//此处判断了方法是否是静态方法并做了不同的处理</span>
+        <span class="hljs-keyword">if</span> (METHOD-&gt;is_static()) &#123;
+          rcvr = METHOD-&gt;constants()-&gt;pool_holder()-&gt;java_mirror();
+        &#125; <span class="hljs-keyword">else</span> &#123;
+          rcvr = LOCALS_OBJECT(<span class="hljs-number">0</span>);
+          VERIFY_OOP(rcvr);
+        &#125;
+        
+        <span class="hljs-comment">//省略了很多代码</span>
+        ...
+
+          <span class="hljs-keyword">if</span> (anticipated_bias_locking_value == <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-comment">// Already biased towards this thread, nothing to do.</span>
+            <span class="hljs-keyword">if</span> (PrintBiasedLockingStatistics) &#123;
+              (* BiasedLocking::biased_lock_entry_count_addr())++;
+            &#125;
+            success = <span class="hljs-literal">true</span>;
+          &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((anticipated_bias_locking_value &amp; markOopDesc::biased_lock_mask_in_place) != <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-comment">// Try to revoke bias.</span>
+            markOop header = rcvr-&gt;klass()-&gt;prototype_header();
+            <span class="hljs-keyword">if</span> (hash != markOopDesc::no_hash) &#123;
+              header = header-&gt;copy_set_hash(hash);
+            &#125;
+            <span class="hljs-keyword">if</span> (Atomic::cmpxchg_ptr(header, rcvr-&gt;mark_addr(), mark) == mark) &#123;
+              <span class="hljs-keyword">if</span> (PrintBiasedLockingStatistics)
+                (*BiasedLocking::revoked_lock_entry_count_addr())++;
+            &#125;
+          &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((anticipated_bias_locking_value &amp; epoch_mask_in_place) != <span class="hljs-number">0</span>) &#123;
+            <span class="hljs-comment">// Try to rebias.</span>
+            markOop new_header = (markOop) ( (<span class="hljs-keyword">intptr_t</span>) rcvr-&gt;klass()-&gt;prototype_header() | thread_ident);
+            <span class="hljs-keyword">if</span> (hash != markOopDesc::no_hash) &#123;
+              new_header = new_header-&gt;copy_set_hash(hash);
+            &#125;
+            <span class="hljs-keyword">if</span> (Atomic::cmpxchg_ptr((<span class="hljs-keyword">void</span>*)new_header, rcvr-&gt;mark_addr(), mark) == mark) &#123;
+              <span class="hljs-keyword">if</span> (PrintBiasedLockingStatistics) &#123;
+                (* BiasedLocking::rebiased_lock_entry_count_addr())++;
+              &#125;
+            &#125; <span class="hljs-keyword">else</span> &#123;
+              CALL_VM(InterpreterRuntime::monitorenter(THREAD, mon), handle_exception);
+            &#125;</code></pre>
 
 <p>除了上面的还有<code>monitorenter</code>和 <code>monitorexist</code>的执行代码等等，这些代码十分复杂，看起来也比较吃力，但是看过<code>JVM</code>中对锁优化的描述应该会知道，<code>JVM</code>从<code>JDK1.6</code>开始对重量级锁做了很多优化，比如<code>偏向锁</code>，<code>轻量级锁</code>，<code>自旋锁</code>，其中用到了<code>JAVA</code>对象头中的<code>MarkWord</code>来处理锁，所以从上面我们也很容易发现一个叫<code>markOop</code>的对象，其实这个就是<code>MarkWord</code>在<code>c++</code>的定义</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>从<code>synchronized</code>到字节码再到<code>jvm</code>底层源码的路径已经大概提了一些，那么接下来就区别分析<code>偏向锁</code>，<code>轻量级锁</code>的<code>jvm</code>实现。</p>
-</div></article><div class="post-meta__tag-list"><a class="post-meta__tags" href="/crazy_ll/tags/基础/">基础</a></div><nav id="pagination"><div class="prev-post pull-left"><a href="/crazy_ll/2020/08/02/JAVA基础/偏向锁/"><i class="fa fa-chevron-left">  </i><span>synchronized关键字底层理解-偏向锁</span></a></div><div class="next-post pull-right"><a href="/crazy_ll/2020/01/15/dubbo/SPI服务发现源码/"><span>SPI服务发现</span><i class="fa fa-chevron-right"></i></a></div></nav><div id="vcomment"></div><script src="https://cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js"></script><script>var notify = 'true' == true ? true : false;
-var verify = 'false' == true ? true : false;
-var GUEST_INFO = ['nick','mail','link'];
-var guest_info = 'nick,mail,link'.split(',').filter(function(item){
-  return GUEST_INFO.indexOf(item) > -1
-});
-guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
-window.valine = new Valine({
-  el:'#vcomment',
-  notify:notify,
-  verify:verify,
-  appId:'XkvBpo38Cd4vvKlSGOwAyhqj-MdYXbMMI',
-  appKey:'xeizOTCtDm1lTOaKDO8p9Nex',
-  placeholder:'随便写点什么吧',
-  avatar:'mm',
-  guest_info:guest_info,
-  pageSize:'10',
-  lang: 'zh-cn'
-})</script></div></div><footer class="footer-bg" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div class="layout" id="footer"><div class="copyright">&copy;2018 - 2020 By HY</div><div class="framework-info"><span>驱动 - </span><a href="https://learncode.com.cn"><span>HYY</span></a><span class="footer-separator">|</span><span>主题 - </span><a href="https://learncode.com.cn"><span>HH</span></a></div><div class="footer_custom_text">welcome</div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_page_pv"><i class="fa fa-file-o"></i><span id="busuanzi_value_page_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/crazy_ll/js/utils.js?version=1.6.1"></script><script src="/crazy_ll/js/fancybox.js?version=1.6.1"></script><script src="/crazy_ll/js/sidebar.js?version=1.6.1"></script><script src="/crazy_ll/js/copy.js?version=1.6.1"></script><script src="/crazy_ll/js/fireworks.js?version=1.6.1"></script><script src="/crazy_ll/js/transition.js?version=1.6.1"></script><script src="/crazy_ll/js/scroll.js?version=1.6.1"></script><script src="/crazy_ll/js/head.js?version=1.6.1"></script><script src="/crazy_ll/js/search/local-search.js"></script><script>if(/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
-  $('#nav').addClass('is-mobile')
-  $('footer').addClass('is-mobile')
-}</script><div class="search-dialog" id="local-search"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章"></div></div></div><hr><div id="local-search-results"><div id="local-hits"></div><div id="local-stats"><div class="local-search-stats__hr" id="hr"><span>由</span> <a href="https://github.com/wzpan/hexo-generator-search" style="color:#49B1F5;">hexo-generator-search</a>
- <span>提供支持</span></div></div></div><span class="search-close-button"><i class="fa fa-times"></i></span></div><div class="search-mask"></div></body></html>
+<pre><code class="hljs html"><span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"btn"</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"url"</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"title"</span>&gt;</span>下一篇 synchronized关键字底层理解-偏向锁<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span></code></pre>
+
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/crazy_ll/categories/java基础/">java基础</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/crazy_ll/tags/基础/">基础</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext row">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/crazy_ll/2020/08/02/JAVA基础/偏向锁/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">synchronized关键字底层理解-偏向锁</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/crazy_ll/2020/01/15/dubbo/SPI服务发现源码/">
+                        <span class="hidden-mobile">SPI服务发现</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments">
+                
+                
+  <script type="text/javascript">
+    function loadUtterances() {
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'crazzyHY/blog-comment');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', 'github-light');
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    }
+    waitElementVisible('comments', loadUtterances)
+  </script>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div id="tocbot"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+  </main>
+
+  
+    <a id="scroll-top-button" href="#" role="button">
+      <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+    </a>
+  
+
+  
+    <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+  
+
+  
+
+  
+
+  <footer class="mt-5">
+  <div class="text-center py-3">
+    <div>
+      <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener">
+        <span>Fluid</span></a>
+    </div>
+    
+
+    
+
+    
+  </div>
+</footer>
+
+<!-- SCRIPTS -->
+<script  src="https://cdn.staticfile.org/jquery/3.4.1/jquery.min.js" ></script>
+<script  src="https://cdn.staticfile.org/twitter-bootstrap/4.4.1/js/bootstrap.min.js" ></script>
+<script  src="/crazy_ll/js/debouncer.js" ></script>
+<script  src="/crazy_ll/js/main.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/crazy_ll/js/lazyload.js" ></script>
+  
+
+
+
+  <script defer src="https://cdn.staticfile.org/clipboard.js/2.0.6/clipboard.min.js" ></script>
+  <script  src="/crazy_ll/js/clipboard-use.js" ></script>
+
+
+
+
+
+
+
+  <script  src="https://cdn.staticfile.org/tocbot/4.11.1/tocbot.min.js" ></script>
+  <script>
+    $(document).ready(function () {
+      var boardCtn = $('#board-ctn');
+      var boardTop = boardCtn.offset().top;
+
+      tocbot.init({
+        tocSelector: '#tocbot',
+        contentSelector: '#post-body',
+        headingSelector: 'h1,h2,h3,h4,h5,h6',
+        linkClass: 'tocbot-link',
+        activeLinkClass: 'tocbot-active-link',
+        listClass: 'tocbot-list',
+        isCollapsedClass: 'tocbot-is-collapsed',
+        collapsibleClass: 'tocbot-is-collapsible',
+        collapseDepth: 0,
+        scrollSmooth: true,
+        headingsOffset: -boardTop
+      });
+      if ($('.toc-list-item').length > 0) {
+        $('#toc').css('visibility', 'visible');
+      }
+    });
+  </script>
+
+
+
+  <script  src="https://cdn.staticfile.org/typed.js/2.0.11/typed.min.js" ></script>
+  <script>
+    var typed = new Typed('#subtitle', {
+      strings: [
+        '  ',
+        "synchronized关键字底层理解&nbsp;",
+      ],
+      cursorChar: "_",
+      typeSpeed: 70,
+      loop: false,
+    });
+    typed.stop();
+    $(document).ready(function () {
+      $(".typed-cursor").addClass("h2");
+      typed.start();
+    });
+  </script>
+
+
+
+  <script  src="https://cdn.staticfile.org/anchor-js/4.2.2/anchor.min.js" ></script>
+  <script>
+    anchors.options = {
+      placement: "right",
+      visible: "hover",
+      
+    };
+    var el = "h1,h2,h3,h4,h5,h6".split(",");
+    var res = [];
+    for (item of el) {
+      res.push(".markdown-body > " + item)
+    }
+    anchors.add(res.join(", "))
+  </script>
+
+
+
+  <script  src="/crazy_ll/js/local-search.js" ></script>
+  <script>
+    var path = "/crazy_ll/local-search.xml";
+    var inputArea = document.querySelector("#local-search-input");
+    inputArea.onclick = function () {
+      searchFunc(path, 'local-search-input', 'local-search-result');
+      this.onclick = null
+    }
+  </script>
+
+
+
+  <script  src="https://cdn.staticfile.org/fancybox/3.5.7/jquery.fancybox.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+  <script>
+    $('#post img:not(.no-zoom img, img[no-zoom]), img[zoom]').each(
+      function () {
+        var element = document.createElement('a');
+        $(element).attr('data-fancybox', 'images');
+        $(element).attr('href', $(this).attr('src'));
+        $(this).wrap(element);
+      }
+    );
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?5b1a2b7048d7b2ca482bb0bcc0e2387e";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+</body>
+</html>

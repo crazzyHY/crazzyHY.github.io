@@ -1,22 +1,249 @@
-<!DOCTYPE html><html lang="zh-Hans"><head><meta name="generator" content="Hexo 3.9.0"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta name="description" content="MySQL锁分析（repeatable read）"><meta name="keywords" content="基础"><meta name="author" content="HY"><meta name="copyright" content="HY"><title>MySQL锁分析（repeatable read） | HY'S 代码挖掘站</title><link rel="shortcut icon" href="/crazy_ll/melody-favicon.ico"><link rel="stylesheet" href="/crazy_ll/css/index.css?version=1.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@latest/css/font-awesome.min.css?version=1.6.1"><link rel="dns-prefetch" href="https://cdn.staticfile.org"><link rel="dns-prefetch" href="https://cdn.bootcss.com"><link rel="dns-prefetch" href="https://creativecommons.org"><script>var GLOBAL_CONFIG = { 
-  root: '/crazy_ll/',
-  algolia: undefined,
-  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容:${query}"}},
-  copy: {
-    success: '复制成功',
-    error: '复制错误',
-    noSupport: '浏览器不支持'
-  }
-} </script></head><body><i class="fa fa-arrow-right" id="toggle-sidebar" aria-hidden="true"></i><div id="sidebar"><div class="toggle-sidebar-info text-center"><span data-toggle="切换文章详情">切换站点概览</span><hr></div><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar"></div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#MySQL语句锁分析"><span class="toc-number">1.</span> <span class="toc-text">MySQL语句锁分析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#RR级别下的锁"><span class="toc-number">1.1.</span> <span class="toc-text">RR级别下的锁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#对主键进行等值查询时候的锁定情况"><span class="toc-number">1.1.1.</span> <span class="toc-text">对主键进行等值查询时候的锁定情况</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#那查询不存在主键会是怎么样加锁的呢"><span class="toc-number">1.1.2.</span> <span class="toc-text">那查询不存在主键会是怎么样加锁的呢</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#对主键进行范围查询"><span class="toc-number">1.2.</span> <span class="toc-text">对主键进行范围查询</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#二级索引"><span class="toc-number">1.2.1.</span> <span class="toc-text">二级索引</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#唯一二级索引"><span class="toc-number">1.2.1.1.</span> <span class="toc-text">唯一二级索引</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#等值查询"><span class="toc-number">1.2.1.1.1.</span> <span class="toc-text">等值查询</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#范围查询"><span class="toc-number">1.2.1.1.2.</span> <span class="toc-text">范围查询</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#普通二级索引"><span class="toc-number">1.2.1.2.</span> <span class="toc-text">普通二级索引</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#等值查询-1"><span class="toc-number">1.2.1.2.1.</span> <span class="toc-text">等值查询</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#update操作的锁分析"><span class="toc-number">1.2.1.3.</span> <span class="toc-text">update操作的锁分析</span></a></li></ol></li></ol></li></ol></li></ol></div></div><div class="author-info hide"><div class="author-info__avatar text-center"><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019164931.png"></div><div class="author-info__name text-center">HY</div><div class="author-info__description text-center">代码挖掘机</div><hr><div class="author-info-articles"><a class="author-info-articles__archives article-meta" href="/crazy_ll/archives"><span class="pull-left">文章</span><span class="pull-right">20</span></a><a class="author-info-articles__tags article-meta" href="/crazy_ll/tags"><span class="pull-left">标签</span><span class="pull-right">4</span></a><a class="author-info-articles__categories article-meta" href="/crazy_ll/categories"><span class="pull-left">分类</span><span class="pull-right">6</span></a></div></div></div><div id="content-outer"><div id="top-container" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div id="page-header"><span class="pull-left"> <a id="site-name" href="/crazy_ll/">HY'S 代码挖掘站</a></span><i class="fa fa-bars toggle-menu pull-right" aria-hidden="true"></i><span class="pull-right menus"><a class="site-page social-icon search"><i class="fa fa-search"></i><span> 搜索</span></a><a class="site-page" href="/">主页</a><a class="site-page" href="/archives">归档</a><a class="site-page" href="/tags">标签</a><a class="site-page" href="/categories">分类</a><a class="site-page" href="/comment">留言板</a></span></div><div id="post-info"><div id="post-title">MySQL锁分析（repeatable read）</div><div id="post-meta"><time class="post-meta__date"><i class="fa fa-calendar" aria-hidden="true"></i> 2019-11-19</time><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/crazy_ll/categories/MySQL/">MySQL</a></div></div></div><div class="layout" id="content-inner"><article id="post"><div class="article-container" id="post-content"><h1 id="MySQL语句锁分析"><a href="#MySQL语句锁分析" class="headerlink" title="MySQL语句锁分析"></a>MySQL语句锁分析</h1><p>当前的数据库版本</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; show variables like &apos;version&apos;</span><br><span class="line">    -&gt; ;</span><br><span class="line">+---------------+--------+</span><br><span class="line">| Variable_name | Value  |</span><br><span class="line">+---------------+--------+</span><br><span class="line">| version       | 8.0.18 |</span><br><span class="line">+---------------+--------+</span><br><span class="line">1 row in set (0.01 sec)</span><br></pre></td></tr></table></figure>
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/crazy_ll/img/favicon.png">
+  <link rel="icon" type="image/png" href="/crazy_ll/img/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="代码挖掘机">
+  <meta name="author" content="HY">
+  <meta name="keywords" content>
+  <title>MySQL锁分析（repeatable read） - HY&#39;S 代码挖掘站</title>
+
+  <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/4.4.1/css/bootstrap.min.css">
+
+
+  <link rel="stylesheet" href="https://cdn.staticfile.org/github-markdown-css/4.0.0/github-markdown.min.css">
+  <link rel="stylesheet" href="/crazy_ll/lib/hint/hint.min.css">
+
+  
+    
+    <link rel="stylesheet" href="https://cdn.staticfile.org/highlight.js/10.0.0/styles/github-gist.min.css">
+  
+
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_6peoq002giu.css">
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_pjno9b9zyxs.css">
+
+<link rel="stylesheet" href="/crazy_ll/css/main.css">
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script src="/crazy_ll/js/utils.js"></script>
+  <script src="/crazy_ll/js/color-schema.js"></script>
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/crazy_ll/">&nbsp;<strong>代码🔍</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/crazy_ll/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner intro-2" id="background" parallax=true
+         style="background: url('/crazy_ll/img/default.png') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="container page-header text-center fade-in-up">
+            <span class="h2" id="subtitle">
+              
+            </span>
+
+            
+              
+  <div class="mt-3 post-meta">
+    <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+    <time datetime="2019-11-19 00:00" pubdate>
+      2019年11月19日 凌晨
+    </time>
+  </div>
+
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.8k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      41
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-md">
+      <div class="container nopadding-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto" id="post">
+            <!-- SEO header -->
+            <h1 style="display: none">MySQL锁分析（repeatable read）</h1>
+            
+            <div class="markdown-body" id="post-body">
+              <h1 id="MySQL语句锁分析"><a href="#MySQL语句锁分析" class="headerlink" title="MySQL语句锁分析"></a>MySQL语句锁分析</h1><p>当前的数据库版本</p>
+<pre><code class="hljs undefined">mysql&gt; show variables like <span class="hljs-emphasis">'version'</span>
+<span class="hljs-section">    -&gt; ;
++---------------+--------+</span>
+<span class="hljs-section">| Variable_name | Value  |
++---------------+--------+</span>
+<span class="hljs-section">| version       | 8.0.18 |
++---------------+--------+</span>
+1 row in set (0.01 sec)</code></pre>
 
 <p>来看一下表结构是什么样子的</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; desc t;</span><br><span class="line">+-------+------------+------+-----+---------+----------------+</span><br><span class="line">| Field | Type       | Null | Key | Default | Extra          |</span><br><span class="line">+-------+------------+------+-----+---------+----------------+</span><br><span class="line">| a     | int(10)    | NO   | PRI | NULL    | auto_increment |</span><br><span class="line">| b     | varchar(5) | YES  |     | NULL    |                |</span><br><span class="line">| c     | varchar(5) | YES  |     | NULL    |                |</span><br><span class="line">+-------+------------+------+-----+---------+----------------+</span><br><span class="line">3 rows in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; desc t;
++-------+------------+------+-----+---------+----------------+
+| Field |<span class="hljs-built_in"> Type </span>      | <span class="hljs-literal">Null</span> | Key |<span class="hljs-built_in"> Default </span>| Extra          |
++-------+------------+------+-----+---------+----------------+
+| a     | int(10)    | <span class="hljs-literal">NO</span>   | PRI | <span class="hljs-literal">NULL</span>    | auto_increment |
+| b     | varchar(5) | <span class="hljs-literal">YES</span>  |     | <span class="hljs-literal">NULL</span>    |                |
+| c     | varchar(5) | <span class="hljs-literal">YES</span>  |     | <span class="hljs-literal">NULL</span>    |                |
++-------+------------+------+-----+---------+----------------+
+3 rows <span class="hljs-keyword">in</span> <span class="hljs-builtin-name">set</span> (0.00 sec)</code></pre>
 
 <a id="more"></a>
 
 <p>再来看看表中的数据</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; select * from t;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 1 | a    | a    |</span><br><span class="line">| 3 | a    | b    |</span><br><span class="line">| 5 | a    | c    |</span><br><span class="line">| 6 | b    | c    |</span><br><span class="line">| 9 | b    | d    |</span><br><span class="line">+---+------+------+</span><br><span class="line">5 rows in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined"><span class="hljs-section">mysql&gt; select * from t;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+| 1 | a    | a    |
+| 3 | a    | b    |
+| 5 | a    | c    |
+| 6 | b    | c    |
+<span class="hljs-section">| 9 | b    | d    |
++---+------+------+</span>
+5 rows in set (0.00 sec)</code></pre>
 
 <h2 id="RR级别下的锁"><a href="#RR级别下的锁" class="headerlink" title="RR级别下的锁"></a>RR级别下的锁</h2><p>RR级别和前面说到<code>read uncommited</code>以及<code>read commited</code>级别相差的地方在于，<code>RR</code>级别避免了幻读的出现</p>
 <p>所以，最主要的区别就在于，RR级别下有为了避免幻读的<code>Next-key Locks</code></p>
@@ -43,119 +270,620 @@
 </tr>
 </tbody></table>
 <h3 id="对主键进行等值查询时候的锁定情况"><a href="#对主键进行等值查询时候的锁定情况" class="headerlink" title="对主键进行等值查询时候的锁定情况"></a>对主键进行等值查询时候的锁定情况</h3><p>现在对表<code>t</code>做一个锁定的查询</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from t where a=1 for update;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 1 | a    | a    |</span><br><span class="line">+---+------+------+</span><br><span class="line">1 row in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+<span class="hljs-section">mysql&gt; select * from t where a=1 for update;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+<span class="hljs-section">| 1 | a    | a    |
++---+------+------+</span>
+1 row in set (0.00 sec)</code></pre>
 
 <p>然后，同时开启另一个事物去对这条记录进行锁定查询和更新</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from t where a=1 for update;</span><br><span class="line">^C^C -- query aborted</span><br><span class="line">ERROR 1317 (70100): Query execution was interrupted</span><br><span class="line">mysql&gt; update t set b=&apos;d&apos; where a=1;</span><br><span class="line">^C^C -- query aborted</span><br><span class="line">ERROR 1317 (70100): Query execution was interrupted</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql&gt; select * from t where a=1 for update;
+^C^C -- query aborted
+<span class="hljs-keyword">ERROR </span>1317 (70100): Query execution was interrupted
+mysql&gt; update t set b='d' where a=1;
+^C^C -- query aborted
+<span class="hljs-keyword">ERROR </span>1317 (70100): Query execution was interrupted</code></pre>
 
 <p>很明显，这是直接锁定了这<code>a=1</code>的记录，所以另外一个事物对这条记录的锁定查询和更新都是需要等待锁释放以后才可以执行的，可以看到我两次中断了查询</p>
 <p>来看一眼这情况下的锁情况</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; melect * from performance_schema.data_locks; </span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| INDEX_NAME | OBJECT_INSTANCE_BEGIN | LOCK_TYPE | LOCK_MODE     | LOCK_STATUS | LOCK_DATA |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| NULL       |       140399997413256 | TABLE     | IX            | GRANTED     | NULL      |</span><br><span class="line">| PRIMARY    |       140400015375216 | RECORD    | X,REC_NOT_GAP | WAITING     | 1         |</span><br><span class="line">| NULL       |       140399997411224 | TABLE     | IX            | GRANTED     | NULL      |</span><br><span class="line">| PRIMARY    |       140400015370264 | RECORD    | X,REC_NOT_GAP | GRANTED     | 1         |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; melect <span class="hljs-symbol">*</span> from performance_schema.data_locks; 
++------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> INDEX_NAME </span>|<span class="hljs-string"> OBJECT_INSTANCE_BEGIN </span>|<span class="hljs-string"> LOCK_TYPE </span>|<span class="hljs-string"> LOCK_MODE     </span>|<span class="hljs-string"> LOCK_STATUS </span>|<span class="hljs-string"> LOCK_DATA </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string">       140399997413256 </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX            </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string">       140400015375216 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> WAITING     </span>|<span class="hljs-string"> 1         </span>|
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string">       140399997411224 </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX            </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string">       140400015370264 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 1         </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+</code></pre>
 
 <p>这个结果太长了，我只截取了重要的部分</p>
 <p>其中有个<code>LOCK_TYPE</code>代表锁的类型，其中<code>TABLE</code>类型的出现了两次，<strong>每个事务在获取锁的时候，都会在表上加一个意向独占锁</strong>，所以出现了两个<code>IX</code>，看剩下的两个锁信息，这两个的<code>LOCK_TYPE</code>都是<code>RECORD</code>，对应的<code>LOCK_MODE</code>为<code>X,REC_NOT_GAP</code>，<code>X</code>代表的是独占锁，<code>REC_NOT_GAP</code>代表的则是行记录锁，那么还能看到一条记录处于等待状态，一条记录处于获取状态，就是说明后一个事物处于等待锁释放的状态</p>
 <h3 id="那查询不存在主键会是怎么样加锁的呢"><a href="#那查询不存在主键会是怎么样加锁的呢" class="headerlink" title="那查询不存在主键会是怎么样加锁的呢"></a>那查询不存在主键会是怎么样加锁的呢</h3><p>可以回顾一下表数据，可以发现主键<code>a</code>并不是完全连续的，所以如果这时候查询了一个不存在的主键的记录，另一个事物对这个记录再进行插入会怎么样呢</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from t where a=2 for update;</span><br><span class="line">Empty set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; <span class="hljs-keyword">begin</span>;
+Query OK, <span class="hljs-number">0</span> rows affected (<span class="hljs-number">0.00</span> sec)
+
+mysql&gt; <span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a=<span class="hljs-number">2</span> <span class="hljs-keyword">for</span> update;
+<span class="hljs-keyword">Empty</span> <span class="hljs-keyword">set</span> (<span class="hljs-number">0.00</span> sec)</code></pre>
 
 <p>然后是插入的事物</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; insert into t values(2,&apos;c&apos;,&apos;f&apos;);</span><br><span class="line">^C^C -- query aborted</span><br><span class="line">ERROR 1317 (70100): Query execution was interrupted</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql&gt; insert into t values(2,'c','f');
+^C^C -- query aborted
+<span class="hljs-keyword">ERROR </span>1317 (70100): Query execution was interrupted</code></pre>
 
 <p>结果来看依旧是被锁定了，这个就是RR级别下的防止幻读，因为需要防止幻读，所以不能出现执行两次<code>select.....for update</code>后，第一次出现了数据，而第二次没有出现数据，所以这时候，其实是会在记录<code>a=1</code>和记录<code>a=3</code>之间添加一个<code>Gap Locks</code>，所以在插入的时候就处于一个等待锁释放的状态了，同样来看一下锁情况</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">+------------+-----------------------+-----------+---------------------+-------------+---</span><br><span class="line">| INDEX_NAME | OBJECT_INSTANCE_BEGIN | LOCK_TYPE | LOCK_MODE          | LOCK_STATUS | LOCK_D</span><br><span class="line">+------------+--------------------+-----------+------------------------+-------------+------</span><br><span class="line">| NULL       |    140399997415256 | TABLE     | IX                     | GRANTED     | NULL  </span><br><span class="line">| PRIMARY    |    140400015379480 | RECORD    | X,GAP,INSERT_INTENTION | WAITING     | 3     </span><br><span class="line">| NULL       |    140399997413256 | TABLE     | IX                     | GRANTED     | NULL  </span><br><span class="line">| PRIMARY    |    140400015374872 | RECORD    | X,GAP                  | GRANTED     | 3     </span><br><span class="line">+------------+--------------------+-----------+------------------------+-------------+-------</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">+------------+-----------------------+-----------+---------------------+-------------+---
+| <span class="hljs-type">INDEX_NAME</span> | <span class="hljs-type">OBJECT_INSTANCE_BEGIN</span> | <span class="hljs-type">LOCK_TYPE</span> | <span class="hljs-type">LOCK_MODE</span>          | <span class="hljs-type">LOCK_STATUS</span> | <span class="hljs-type">LOCK_D</span>
++------------+--------------------+-----------+------------------------+-------------+------
+| <span class="hljs-type">NULL</span>       |    <span class="hljs-type">140399997415256</span> | <span class="hljs-type">TABLE</span>     | <span class="hljs-type">IX</span>                     | <span class="hljs-type">GRANTED</span>     | <span class="hljs-type">NULL</span>  
+| <span class="hljs-type">PRIMARY</span>    |    <span class="hljs-type">140400015379480</span> | <span class="hljs-type">RECORD</span>    | <span class="hljs-type">X</span>,GAP,INSERT_INTENTION | <span class="hljs-type">WAITING</span>     | <span class="hljs-type">3</span>     
+| <span class="hljs-type">NULL</span>       |    <span class="hljs-type">140399997413256</span> | <span class="hljs-type">TABLE</span>     | <span class="hljs-type">IX</span>                     | <span class="hljs-type">GRANTED</span>     | <span class="hljs-type">NULL</span>  
+| <span class="hljs-type">PRIMARY</span>    |    <span class="hljs-type">140400015374872</span> | <span class="hljs-type">RECORD</span>    | <span class="hljs-type">X</span>,GAP                  | <span class="hljs-type">GRANTED</span>     | <span class="hljs-type">3</span>     
++------------+--------------------+-----------+------------------------+-------------+-------</code></pre>
 
 <p>表锁的话和上面的情况就是一样的了，因为查询的主键，主键是唯一的，并且查询的是<code>a=2</code>的值，这个值如果插入到表中，只会存储在<code>a=1</code>和<code>a=3</code>之间，所以为了避免幻读，数据库会在这数据间添加<code>GAP</code>锁，防止其他数据插入，当有另一个事物进行<code>insert</code>插入的时候，发现有<code>GAP</code>锁，就会生成一个插入意向锁<code>INSERT_INTENTION</code>，很明显的也能看到锁状态处于<code>WAITING</code>，这条<code>insert</code>语句很明显处于等待锁的状态，所以被阻塞</p>
 <h2 id="对主键进行范围查询"><a href="#对主键进行范围查询" class="headerlink" title="对主键进行范围查询"></a>对主键进行范围查询</h2><p>还是之前数据</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; select * from t;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 1 | a    | a    |</span><br><span class="line">| 3 | a    | b    |</span><br><span class="line">| 5 | a    | c    |</span><br><span class="line">| 6 | b    | c    |</span><br><span class="line">| 9 | b    | d    |</span><br><span class="line">+---+------+------+</span><br><span class="line">5 rows in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined"><span class="hljs-section">mysql&gt; select * from t;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+| 1 | a    | a    |
+| 3 | a    | b    |
+| 5 | a    | c    |
+| 6 | b    | c    |
+<span class="hljs-section">| 9 | b    | d    |
++---+------+------+</span>
+5 rows in set (0.00 sec)</code></pre>
 
 <p>现在执行这样的sql</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from t where a&lt;5 for update;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 1 | a    | a    |</span><br><span class="line">| 3 | a    | b    |</span><br><span class="line">+---+------+------+</span><br><span class="line">2 rows in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+<span class="hljs-section">mysql&gt; select * from t where a&lt;5 for update;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+| 1 | a    | a    |
+<span class="hljs-section">| 3 | a    | b    |
++---+------+------+</span>
+2 rows in set (0.00 sec)</code></pre>
 
 <p>然后再执行</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from t where a=6 for update;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 6 | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">1 row in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+<span class="hljs-section">mysql&gt; select * from t where a=6 for update;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+<span class="hljs-section">| 6 | b    | c    |
++---+------+------+</span>
+1 row in set (0.00 sec)</code></pre>
 
 <p>再版本5.7的时候，其实第二条sql的执行是会被阻塞的（因为在版本为5.7的时候，在本例子中查询的时候是需要查询到<code>a=6</code>的这条数据，并且锁定，并且由于没有使用<code>索引条件下推</code>而导致锁定数据后，返回<code>server</code>层继续做条件判断，此时操作是没有释放锁，所以会导致这条<code>select * from t where a=6 for update;</code>被阻塞），很明显，在版本到8的时候，这个锁更加正确了</p>
 <h3 id="二级索引"><a href="#二级索引" class="headerlink" title="二级索引"></a>二级索引</h3><h4 id="唯一二级索引"><a href="#唯一二级索引" class="headerlink" title="唯一二级索引"></a>唯一二级索引</h4><p>现在的表中没有二级索引，那么先创建一个，调整了一下数据，然后执行了一下sql</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; alter table t add unique(b);</span><br><span class="line">Query OK, 0 rows affected (0.04 sec)</span><br><span class="line">Records: 0  Duplicates: 0  Warnings: 0</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; alter table t <span class="hljs-keyword">add</span> unique(b)<span class="hljs-comment">;</span>
+Query OK, <span class="hljs-number">0</span> rows affected (<span class="hljs-number">0.04</span> <span class="hljs-keyword">sec</span>)
+<span class="hljs-symbol">Records:</span> <span class="hljs-number">0</span>  Duplicates: <span class="hljs-number">0</span>  Warnings: <span class="hljs-number">0</span></code></pre>
 
 <p>表结构现在是这样的</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; desc t ;</span><br><span class="line">+-------+------------+------+-----+---------+----------------+</span><br><span class="line">| Field | Type       | Null | Key | Default | Extra          |</span><br><span class="line">+-------+------------+------+-----+---------+----------------+</span><br><span class="line">| a     | int(10)    | NO   | PRI | NULL    | auto_increment |</span><br><span class="line">| b     | varchar(5) | YES  | UNI | NULL    |                |</span><br><span class="line">| c     | varchar(5) | YES  |     | NULL    |                |</span><br><span class="line">+-------+------------+------+-----+---------+----------------+</span><br><span class="line">3 rows in set (0.01 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; desc t ;
++-------+------------+------+-----+---------+----------------+
+| Field |<span class="hljs-built_in"> Type </span>      | <span class="hljs-literal">Null</span> | Key |<span class="hljs-built_in"> Default </span>| Extra          |
++-------+------------+------+-----+---------+----------------+
+| a     | int(10)    | <span class="hljs-literal">NO</span>   | PRI | <span class="hljs-literal">NULL</span>    | auto_increment |
+| b     | varchar(5) | <span class="hljs-literal">YES</span>  | UNI | <span class="hljs-literal">NULL</span>    |                |
+| c     | varchar(5) | <span class="hljs-literal">YES</span>  |     | <span class="hljs-literal">NULL</span>    |                |
++-------+------------+------+-----+---------+----------------+
+3 rows <span class="hljs-keyword">in</span> <span class="hljs-builtin-name">set</span> (0.01 sec)</code></pre>
 
-<h5 id="等值查询"><a href="#等值查询" class="headerlink" title="等值查询"></a>等值查询</h5><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from t where b=&apos;a&apos; for update;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 1 | a    | a    |</span><br><span class="line">+---+------+------+</span><br><span class="line">1 row in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<h5 id="等值查询"><a href="#等值查询" class="headerlink" title="等值查询"></a>等值查询</h5><pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+<span class="hljs-section">mysql&gt; select * from t where b='a' for update;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+<span class="hljs-section">| 1 | a    | a    |
++---+------+------+</span>
+1 row in set (0.00 sec)</code></pre>
 
 <p>这时候会锁定什么呢？</p>
 <p>很明显，会锁住二级索引和聚簇索引（索引就是数据）</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| INDEX_NAME | OBJECT_INSTANCE_BEGIN | LOCK_TYPE | LOCK_MODE     | LOCK_STATUS | LOCK_DATA |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| NULL       |       140399997413256 | TABLE     | IX            | GRANTED     | NULL      |</span><br><span class="line">| b          |       140400015374872 | RECORD    | X,REC_NOT_GAP | GRANTED     | &apos;a&apos;, 1    |</span><br><span class="line">| PRIMARY    |       140400015375216 | RECORD    | X,REC_NOT_GAP | GRANTED     | 1         |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">+------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> INDEX_NAME </span>|<span class="hljs-string"> OBJECT_INSTANCE_BEGIN </span>|<span class="hljs-string"> LOCK_TYPE </span>|<span class="hljs-string"> LOCK_MODE     </span>|<span class="hljs-string"> LOCK_STATUS </span>|<span class="hljs-string"> LOCK_DATA </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string">       140399997413256 </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX            </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string">       140400015374872 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'a', 1    </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string">       140400015375216 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 1         </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+</code></pre>
 
 <p>通过这个<code>INDEX_NAME</code>可以看到，这条sql是锁定了列<code>b</code>然后再锁定主键，并且都是<code>Record Locks</code>，还有<code>LOCK_DATA</code>对于二级索引来说，存储的内容是二级索引列+主键（在页结构中还有一个页号）</p>
-<h5 id="范围查询"><a href="#范围查询" class="headerlink" title="范围查询"></a>范围查询</h5><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from t force index(b) where b&lt;&apos;c&apos; for update;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 1 | a    | a    |</span><br><span class="line">| 3 | b    | b    |</span><br><span class="line">+---+------+------+</span><br><span class="line">2 rows in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<h5 id="范围查询"><a href="#范围查询" class="headerlink" title="范围查询"></a>范围查询</h5><pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+<span class="hljs-section">mysql&gt; select * from t force index(b) where b&lt;'c' for update;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+| 1 | a    | a    |
+<span class="hljs-section">| 3 | b    | b    |
++---+------+------+</span>
+2 rows in set (0.00 sec)</code></pre>
 
 <p>这时候锁的情况如下</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| INDEX_NAME | OBJECT_INSTANCE_BEGIN | LOCK_TYPE | LOCK_MODE     | LOCK_STATUS | LOCK_DATA |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| NULL       |       140399997413256 | TABLE     | IX            | GRANTED     | NULL      |</span><br><span class="line">| b          |       140400015374872 | RECORD    | X             | GRANTED     | &apos;a&apos;, 1    |</span><br><span class="line">| b          |       140400015374872 | RECORD    | X             | GRANTED     | &apos;b&apos;, 3    |</span><br><span class="line">| b          |       140400015374872 | RECORD    | X             | GRANTED     | &apos;c&apos;, 5    |</span><br><span class="line">| PRIMARY    |       140400015375216 | RECORD    | X,REC_NOT_GAP | GRANTED     | 1         |</span><br><span class="line">| PRIMARY    |       140400015375216 | RECORD    | X,REC_NOT_GAP | GRANTED     | 3         |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">+------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> INDEX_NAME </span>|<span class="hljs-string"> OBJECT_INSTANCE_BEGIN </span>|<span class="hljs-string"> LOCK_TYPE </span>|<span class="hljs-string"> LOCK_MODE     </span>|<span class="hljs-string"> LOCK_STATUS </span>|<span class="hljs-string"> LOCK_DATA </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string">       140399997413256 </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX            </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string">       140400015374872 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X             </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'a', 1    </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string">       140400015374872 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X             </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'b', 3    </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string">       140400015374872 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X             </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'c', 5    </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string">       140400015375216 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 1         </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string">       140400015375216 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 3         </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+</code></pre>
 
 <p>我认为在这里的二级唯一索引处，<code>LOCK_MODE</code>下只有<code>X</code>的时候，代表的就是<code>NEXT-KEY LOCKS</code>（这个锁也称为<code>LOCK_ORDINARY</code>），然后对于主键，就只有普通的<code>RECORD LOCKS</code></p>
 <p><code>a=5,b=c</code>的这条数据却被锁住了，这里对二级索引做了<code>索引条件下推</code>，但是在引擎层将数据直接返回到server层时并没有释放锁，由于二级索引上这锁的存在，也使得无法在数据<code>a=1,b=a ~ a=5,b=c</code>数据之间插入数据</p>
 <p>现在尝试插入一条记录</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; insert into t values(2,&apos;ab&apos;,&apos;f&apos;);</span><br><span class="line">^C^C -- query aborted</span><br><span class="line">ERROR 1317 (70100): Query execution was interrupted</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; insert into t values(2,'ab','f');
+^C^C -- query aborted
+<span class="hljs-keyword">ERROR </span>1317 (70100): Query execution was interrupted</code></pre>
 
 <p>果然是被阻塞了</p>
 <p>再来看一下锁情况</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">+------------+-----------+------------------------+-------------+-----------+</span><br><span class="line">| INDEX_NAME | LOCK_TYPE | LOCK_MODE              | LOCK_STATUS | LOCK_DATA |</span><br><span class="line">+------------+-----------+------------------------+-------------+-----------+</span><br><span class="line">| NULL       | TABLE     | IX                     | GRANTED     | NULL      |</span><br><span class="line">| b          | RECORD    | X,GAP,INSERT_INTENTION | WAITING     | &apos;b&apos;, 3    |</span><br><span class="line">| NULL       | TABLE     | IX                     | GRANTED     | NULL      |</span><br><span class="line">| b          | RECORD    | X                      | GRANTED     | &apos;a&apos;, 1    |</span><br><span class="line">| b          | RECORD    | X                      | GRANTED     | &apos;b&apos;, 3    |</span><br><span class="line">| b          | RECORD    | X                      | GRANTED     | &apos;c&apos;, 5    |</span><br><span class="line">| PRIMARY    | RECORD    | X,REC_NOT_GAP          | GRANTED     | 1         |</span><br><span class="line">| PRIMARY    | RECORD    | X,REC_NOT_GAP          | GRANTED     | 3         |</span><br><span class="line">+------------+-----------+------------------------+-------------+-----------+</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">+------------+-----------+------------------------+-------------+-----------+
+|<span class="hljs-string"> INDEX_NAME </span>|<span class="hljs-string"> LOCK_TYPE </span>|<span class="hljs-string"> LOCK_MODE              </span>|<span class="hljs-string"> LOCK_STATUS </span>|<span class="hljs-string"> LOCK_DATA </span>|
++------------+-----------+------------------------+-------------+-----------+
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX                     </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,GAP,INSERT_INTENTION </span>|<span class="hljs-string"> WAITING     </span>|<span class="hljs-string"> 'b', 3    </span>|
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX                     </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X                      </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'a', 1    </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X                      </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'b', 3    </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X                      </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'c', 5    </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP          </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 1         </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP          </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 3         </span>|
++------------+-----------+------------------------+-------------+-----------+</code></pre>
 
 <p>主要看这条<code>WAITING</code>的记录，<code>insert into t values(2,&#39;ab&#39;,&#39;f&#39;);</code>这条记录插入后是放在<code>a=5,b=c</code>之前的，</p>
 <p>所以出现了插入意向锁，处于等待状态</p>
 <h4 id="普通二级索引"><a href="#普通二级索引" class="headerlink" title="普通二级索引"></a>普通二级索引</h4><p>先修改一下表结构</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; alter table t drop index b;</span><br><span class="line">Query OK, 0 rows affected (0.04 sec)</span><br><span class="line">Records: 0  Duplicates: 0  Warnings: 0</span><br><span class="line">mysql&gt; alter table t add index b(b);</span><br><span class="line">Query OK, 0 rows affected (0.02 sec)</span><br><span class="line">Records: 0  Duplicates: 0  Warnings: 0</span><br><span class="line"></span><br><span class="line">mysql&gt; desc t;</span><br><span class="line">+-------+------------+------+-----+---------+----------------+</span><br><span class="line">| Field | Type       | Null | Key | Default | Extra          |</span><br><span class="line">+-------+------------+------+-----+---------+----------------+</span><br><span class="line">| a     | int(10)    | NO   | PRI | NULL    | auto_increment |</span><br><span class="line">| b     | varchar(5) | YES  | MUL | NULL    |                |</span><br><span class="line">| c     | varchar(5) | YES  |     | NULL    |                |</span><br><span class="line">+-------+------------+------+-----+---------+----------------+</span><br><span class="line">3 rows in set (0.01 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; alter table t drop index b;
+Query OK, 0 rows affected (0.04 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+mysql&gt; alter table t <span class="hljs-builtin-name">add</span> index b(b);
+Query OK, 0 rows affected (0.02 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+
+mysql&gt; desc t;
++-------+------------+------+-----+---------+----------------+
+| Field |<span class="hljs-built_in"> Type </span>      | <span class="hljs-literal">Null</span> | Key |<span class="hljs-built_in"> Default </span>| Extra          |
++-------+------------+------+-----+---------+----------------+
+| a     | int(10)    | <span class="hljs-literal">NO</span>   | PRI | <span class="hljs-literal">NULL</span>    | auto_increment |
+| b     | varchar(5) | <span class="hljs-literal">YES</span>  | MUL | <span class="hljs-literal">NULL</span>    |                |
+| c     | varchar(5) | <span class="hljs-literal">YES</span>  |     | <span class="hljs-literal">NULL</span>    |                |
++-------+------------+------+-----+---------+----------------+
+3 rows <span class="hljs-keyword">in</span> <span class="hljs-builtin-name">set</span> (0.01 sec)</code></pre>
 
 <h5 id="等值查询-1"><a href="#等值查询-1" class="headerlink" title="等值查询"></a>等值查询</h5><p>修改一下表数据</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; update t set b=&apos;b&apos; where a=5;</span><br><span class="line">Query OK, 1 row affected (0.00 sec)</span><br><span class="line">Rows matched: 1  Changed: 1  Warnings: 0</span><br><span class="line"></span><br><span class="line">mysql&gt; commit;</span><br><span class="line">Query OK, 0 rows affected (0.01 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from t;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 1 | a    | a    |</span><br><span class="line">| 3 | b    | b    |</span><br><span class="line">| 5 | b    | c    |</span><br><span class="line">| 6 | d    | c    |</span><br><span class="line">| 9 | e    | d    |</span><br><span class="line">+---+------+------+</span><br><span class="line">5 rows in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql&gt; update t set b=<span class="hljs-emphasis">'b'</span> where a=5;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql&gt; commit;
+Query OK, 0 rows affected (0.01 sec)
+
+<span class="hljs-section">mysql&gt; select * from t;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+| 1 | a    | a    |
+| 3 | b    | b    |
+| 5 | b    | c    |
+| 6 | d    | c    |
+<span class="hljs-section">| 9 | e    | d    |
++---+------+------+</span>
+5 rows in set (0.00 sec)</code></pre>
 
 <p>直接查就完事了</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from t force index(b) where b=&apos;b&apos; for update;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 3 | b    | b    |</span><br><span class="line">| 5 | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">2 rows in set (0.01 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+<span class="hljs-section">mysql&gt; select * from t force index(b) where b='b' for update;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+| 3 | b    | b    |
+<span class="hljs-section">| 5 | b    | c    |
++---+------+------+</span>
+2 rows in set (0.01 sec)</code></pre>
 
 <p>直接来看锁情况</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| INDEX_NAME | OBJECT_INSTANCE_BEGIN | LOCK_TYPE | LOCK_MODE     | LOCK_STATUS | LOCK_DATA |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| NULL       |       140399997413256 | TABLE     | IX            | GRANTED     | NULL      |</span><br><span class="line">| b          |       140400015374872 | RECORD    | X             | GRANTED     | &apos;b&apos;, 3    |</span><br><span class="line">| b          |       140400015374872 | RECORD    | X             | GRANTED     | &apos;b&apos;, 5    |</span><br><span class="line">| PRIMARY    |       140400015375216 | RECORD    | X,REC_NOT_GAP | GRANTED     | 3         |</span><br><span class="line">| PRIMARY    |       140400015375216 | RECORD    | X,REC_NOT_GAP | GRANTED     | 5         |</span><br><span class="line">| b          |       140400015375560 | RECORD    | X,GAP         | GRANTED     | &apos;d&apos;, 6    |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">+------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> INDEX_NAME </span>|<span class="hljs-string"> OBJECT_INSTANCE_BEGIN </span>|<span class="hljs-string"> LOCK_TYPE </span>|<span class="hljs-string"> LOCK_MODE     </span>|<span class="hljs-string"> LOCK_STATUS </span>|<span class="hljs-string"> LOCK_DATA </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string">       140399997413256 </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX            </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string">       140400015374872 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X             </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'b', 3    </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string">       140400015374872 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X             </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'b', 5    </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string">       140400015375216 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 3         </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string">       140400015375216 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 5         </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string">       140400015375560 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,GAP         </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'd', 6    </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+</code></pre>
 
 <p>数据<code>a=3,b=b和a=5,b=b</code>都被加上了<code>NEXT-KEY LOCKS</code>，而<code>a=6,b=d</code>则只加了<code>GAP</code>锁</p>
 <p>加锁查询<code>a=6,b=d</code>会发生什么？</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; select * from t where b=&apos;d&apos; for update;</span><br><span class="line">+---+------+------+</span><br><span class="line">| a | b    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">| 6 | d    | c    |</span><br><span class="line">+---+------+------+</span><br><span class="line">1 row in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined"><span class="hljs-section">mysql&gt; select * from t where b='d' for update;
++---+------+------+</span>
+<span class="hljs-section">| a | b    | c    |
++---+------+------+</span>
+<span class="hljs-section">| 6 | d    | c    |
++---+------+------+</span>
+1 row in set (0.00 sec)</code></pre>
 
 <p>没有阻塞，完全正常</p>
 <p>那么在有<code>GAP</code>锁的地方插入一条数据</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; insert into t values(2,&apos;b&apos;,&apos;f&apos;);</span><br><span class="line">^C^C -- query aborted</span><br><span class="line">ERROR 1317 (70100): Query execution was interrupted</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql&gt; insert into t values(2,'b','f');
+^C^C -- query aborted
+<span class="hljs-keyword">ERROR </span>1317 (70100): Query execution was interrupted</code></pre>
 
 <p>果然是被阻塞了，看一下锁情况</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">+------------+-----------+------------------------+-------------+-----------+</span><br><span class="line">| INDEX_NAME | LOCK_TYPE | LOCK_MODE              | LOCK_STATUS | LOCK_DATA |</span><br><span class="line">+------------+-----------+------------------------+-------------+-----------+</span><br><span class="line">| NULL       | TABLE     | IX                     | GRANTED     | NULL      |</span><br><span class="line">| b          | RECORD    | X,GAP,INSERT_INTENTION | WAITING     | &apos;b&apos;, 3    |</span><br><span class="line">| NULL       | TABLE     | IX                     | GRANTED     | NULL      |</span><br><span class="line">| b          | RECORD    | X                      | GRANTED     | &apos;b&apos;, 3    |</span><br><span class="line">| b          | RECORD    | X                      | GRANTED     | &apos;b&apos;, 5    |</span><br><span class="line">| PRIMARY    | RECORD    | X,REC_NOT_GAP          | GRANTED     | 3         |</span><br><span class="line">| PRIMARY    | RECORD    | X,REC_NOT_GAP          | GRANTED     | 5         |</span><br><span class="line">| b          | RECORD    | X,GAP                  | GRANTED     | &apos;d&apos;, 6    |</span><br><span class="line">+------------+-----------+------------------------+-------------+-----------+</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">+------------+-----------+------------------------+-------------+-----------+
+|<span class="hljs-string"> INDEX_NAME </span>|<span class="hljs-string"> LOCK_TYPE </span>|<span class="hljs-string"> LOCK_MODE              </span>|<span class="hljs-string"> LOCK_STATUS </span>|<span class="hljs-string"> LOCK_DATA </span>|
++------------+-----------+------------------------+-------------+-----------+
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX                     </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,GAP,INSERT_INTENTION </span>|<span class="hljs-string"> WAITING     </span>|<span class="hljs-string"> 'b', 3    </span>|
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX                     </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X                      </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'b', 3    </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X                      </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'b', 5    </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP          </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 3         </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP          </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 5         </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,GAP                  </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'd', 6    </span>|
++------------+-----------+------------------------+-------------+-----------+</code></pre>
 
 <p>很明显可以看到，我们插入这条sql的时候，被<code>a=3,b=b</code>的这条数据上的<code>GAP</code>锁给阻塞了（插入的数据主键为2，所以是放在了主键为3的数据前），生成了一个插入意向锁</p>
-<h4 id="update操作的锁分析"><a href="#update操作的锁分析" class="headerlink" title="update操作的锁分析"></a>update操作的锁分析</h4><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">mysql&gt; begin;</span><br><span class="line">Query OK, 0 rows affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; update t set c=&apos;f&apos; where b&lt;&apos;b&apos;;</span><br><span class="line">Query OK, 1 row affected (0.00 sec)</span><br><span class="line">Rows matched: 1  Changed: 1  Warnings: 0</span><br></pre></td></tr></table></figure>
+<h4 id="update操作的锁分析"><a href="#update操作的锁分析" class="headerlink" title="update操作的锁分析"></a>update操作的锁分析</h4><pre><code class="hljs undefined">mysql&gt; begin;
+Query OK, <span class="hljs-number">0</span> <span class="hljs-built_in">rows</span> affected (<span class="hljs-number">0.00</span> <span class="hljs-built_in">sec</span>)
+
+mysql&gt; update <span class="hljs-built_in">t</span> set c='f' where b&lt;'b';
+Query OK, <span class="hljs-number">1</span> <span class="hljs-built_in">row</span> affected (<span class="hljs-number">0.00</span> <span class="hljs-built_in">sec</span>)
+<span class="hljs-built_in">Rows</span> <span class="hljs-built_in">match</span><span class="hljs-symbol">ed:</span> <span class="hljs-number">1</span>  Chang<span class="hljs-symbol">ed:</span> <span class="hljs-number">1</span>  Warnin<span class="hljs-symbol">gs:</span> <span class="hljs-number">0</span></code></pre>
 
 <p>然后锁的情况是这样的</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| INDEX_NAME | OBJECT_INSTANCE_BEGIN | LOCK_TYPE | LOCK_MODE     | LOCK_STATUS | LOCK_DATA |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br><span class="line">| NULL       |       140399997413256 | TABLE     | IX            | GRANTED     | NULL      |</span><br><span class="line">| b          |       140400015374872 | RECORD    | X             | GRANTED     | &apos;a&apos;, 1    |</span><br><span class="line">| b          |       140400015374872 | RECORD    | X             | GRANTED     | &apos;b&apos;, 3    |</span><br><span class="line">| PRIMARY    |       140400015375216 | RECORD    | X,REC_NOT_GAP | GRANTED     | 1         |</span><br><span class="line">| PRIMARY    |       140400015375216 | RECORD    | X,REC_NOT_GAP | GRANTED     | 3         |</span><br><span class="line">+------------+-----------------------+-----------+---------------+-------------+-----------+</span><br></pre></td></tr></table></figure>
+<pre><code class="hljs undefined">+------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> INDEX_NAME </span>|<span class="hljs-string"> OBJECT_INSTANCE_BEGIN </span>|<span class="hljs-string"> LOCK_TYPE </span>|<span class="hljs-string"> LOCK_MODE     </span>|<span class="hljs-string"> LOCK_STATUS </span>|<span class="hljs-string"> LOCK_DATA </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+
+|<span class="hljs-string"> NULL       </span>|<span class="hljs-string">       140399997413256 </span>|<span class="hljs-string"> TABLE     </span>|<span class="hljs-string"> IX            </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> NULL      </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string">       140400015374872 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X             </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'a', 1    </span>|
+|<span class="hljs-string"> b          </span>|<span class="hljs-string">       140400015374872 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X             </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 'b', 3    </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string">       140400015375216 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 1         </span>|
+|<span class="hljs-string"> PRIMARY    </span>|<span class="hljs-string">       140400015375216 </span>|<span class="hljs-string"> RECORD    </span>|<span class="hljs-string"> X,REC_NOT_GAP </span>|<span class="hljs-string"> GRANTED     </span>|<span class="hljs-string"> 3         </span>|
++------------+-----------------------+-----------+---------------+-------------+-----------+</code></pre>
 
 <p>和上面的类似，查询<code>b&lt;b</code>条件的时候会锁定<code>a=3,b=b</code>的这一条记录，对应到聚簇索引上就是<code>RECORD LOCKS</code>，这里就没什么好说的，都和之前的比较类似</p>
 <p>总结：</p>
 <p>加锁的方式，主要是看是否能够满足当前隔离级别的要求，幻读和读已提交的加锁方式是不一样的，不同的版本加锁方式也是不一样的，在<code>SERIALIZE</code>下，加锁方式和<code>AUTOCOMMIT</code>参数有关，在不自动提交的情况下，<code>SELECT</code>语句都会加上<code>lock in share mode</code>来查询。</p>
 <p>加锁方式还是很复杂的，还是需要多去看看才能记得住</p>
-</div></article><div class="post-meta__tag-list"><a class="post-meta__tags" href="/crazy_ll/tags/基础/">基础</a></div><nav id="pagination"><div class="prev-post pull-left"><a href="/crazy_ll/2019/12/22/SpringMVC对前端传参的对象转换/"><i class="fa fa-chevron-left">  </i><span>SpringMVC后端参数接收转换过程</span></a></div><div class="next-post pull-right"><a href="/crazy_ll/2019/10/27/MySQL/MySQL锁分析（read uncommittedread committed）/"><span>MySQL锁分析（read uncommitted/read committed）</span><i class="fa fa-chevron-right"></i></a></div></nav><div id="vcomment"></div><script src="https://cdn1.lncld.net/static/js/3.0.4/av-min.js"></script><script src="https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js"></script><script>var notify = 'true' == true ? true : false;
-var verify = 'false' == true ? true : false;
-var GUEST_INFO = ['nick','mail','link'];
-var guest_info = 'nick,mail,link'.split(',').filter(function(item){
-  return GUEST_INFO.indexOf(item) > -1
-});
-guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
-window.valine = new Valine({
-  el:'#vcomment',
-  notify:notify,
-  verify:verify,
-  appId:'XkvBpo38Cd4vvKlSGOwAyhqj-MdYXbMMI',
-  appKey:'xeizOTCtDm1lTOaKDO8p9Nex',
-  placeholder:'随便写点什么吧',
-  avatar:'mm',
-  guest_info:guest_info,
-  pageSize:'10',
-  lang: 'zh-cn'
-})</script></div></div><footer class="footer-bg" style="background-image: url(https://hysnotepic.oss-cn-shanghai.aliyuncs.com/img/20191019165037.jpg)"><div class="layout" id="footer"><div class="copyright">&copy;2018 - 2020 By HY</div><div class="framework-info"><span>驱动 - </span><a href="https://learncode.com.cn"><span>HYY</span></a><span class="footer-separator">|</span><span>主题 - </span><a href="https://learncode.com.cn"><span>HH</span></a></div><div class="footer_custom_text">welcome</div><div class="busuanzi"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><span id="busuanzi_container_page_pv"><i class="fa fa-file-o"></i><span id="busuanzi_value_page_pv"></span><span></span></span></div></div></footer><i class="fa fa-arrow-up" id="go-up" aria-hidden="true"></i><script src="https://cdn.jsdelivr.net/npm/animejs@latest/anime.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@latest/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-ui-pack@latest/velocity.ui.min.js"></script><script src="/crazy_ll/js/utils.js?version=1.6.1"></script><script src="/crazy_ll/js/fancybox.js?version=1.6.1"></script><script src="/crazy_ll/js/sidebar.js?version=1.6.1"></script><script src="/crazy_ll/js/copy.js?version=1.6.1"></script><script src="/crazy_ll/js/fireworks.js?version=1.6.1"></script><script src="/crazy_ll/js/transition.js?version=1.6.1"></script><script src="/crazy_ll/js/scroll.js?version=1.6.1"></script><script src="/crazy_ll/js/head.js?version=1.6.1"></script><script src="/crazy_ll/js/search/local-search.js"></script><script>if(/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
-  $('#nav').addClass('is-mobile')
-  $('footer').addClass('is-mobile')
-}</script><div class="search-dialog" id="local-search"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章"></div></div></div><hr><div id="local-search-results"><div id="local-hits"></div><div id="local-stats"><div class="local-search-stats__hr" id="hr"><span>由</span> <a href="https://github.com/wzpan/hexo-generator-search" style="color:#49B1F5;">hexo-generator-search</a>
- <span>提供支持</span></div></div></div><span class="search-close-button"><i class="fa fa-times"></i></span></div><div class="search-mask"></div></body></html>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/crazy_ll/categories/MySQL/">MySQL</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/crazy_ll/tags/基础/">基础</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext row">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/crazy_ll/2019/12/22/SpringMVC对前端传参的对象转换/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">SpringMVC后端参数接收转换过程</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/crazy_ll/2019/10/27/MySQL/MySQL锁分析（read uncommittedread committed）/">
+                        <span class="hidden-mobile">MySQL锁分析（read uncommitted/read committed）</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments">
+                
+                
+  <script type="text/javascript">
+    function loadUtterances() {
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'crazzyHY/blog-comment');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', 'github-light');
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    }
+    waitElementVisible('comments', loadUtterances)
+  </script>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div id="tocbot"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+  </main>
+
+  
+    <a id="scroll-top-button" href="#" role="button">
+      <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+    </a>
+  
+
+  
+    <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+  
+
+  
+
+  
+
+  <footer class="mt-5">
+  <div class="text-center py-3">
+    <div>
+      <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener">
+        <span>Fluid</span></a>
+    </div>
+    
+
+    
+
+    
+  </div>
+</footer>
+
+<!-- SCRIPTS -->
+<script  src="https://cdn.staticfile.org/jquery/3.4.1/jquery.min.js" ></script>
+<script  src="https://cdn.staticfile.org/twitter-bootstrap/4.4.1/js/bootstrap.min.js" ></script>
+<script  src="/crazy_ll/js/debouncer.js" ></script>
+<script  src="/crazy_ll/js/main.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/crazy_ll/js/lazyload.js" ></script>
+  
+
+
+
+  <script defer src="https://cdn.staticfile.org/clipboard.js/2.0.6/clipboard.min.js" ></script>
+  <script  src="/crazy_ll/js/clipboard-use.js" ></script>
+
+
+
+
+
+
+
+  <script  src="https://cdn.staticfile.org/tocbot/4.11.1/tocbot.min.js" ></script>
+  <script>
+    $(document).ready(function () {
+      var boardCtn = $('#board-ctn');
+      var boardTop = boardCtn.offset().top;
+
+      tocbot.init({
+        tocSelector: '#tocbot',
+        contentSelector: '#post-body',
+        headingSelector: 'h1,h2,h3,h4,h5,h6',
+        linkClass: 'tocbot-link',
+        activeLinkClass: 'tocbot-active-link',
+        listClass: 'tocbot-list',
+        isCollapsedClass: 'tocbot-is-collapsed',
+        collapsibleClass: 'tocbot-is-collapsible',
+        collapseDepth: 0,
+        scrollSmooth: true,
+        headingsOffset: -boardTop
+      });
+      if ($('.toc-list-item').length > 0) {
+        $('#toc').css('visibility', 'visible');
+      }
+    });
+  </script>
+
+
+
+  <script  src="https://cdn.staticfile.org/typed.js/2.0.11/typed.min.js" ></script>
+  <script>
+    var typed = new Typed('#subtitle', {
+      strings: [
+        '  ',
+        "MySQL锁分析（repeatable read）&nbsp;",
+      ],
+      cursorChar: "_",
+      typeSpeed: 70,
+      loop: false,
+    });
+    typed.stop();
+    $(document).ready(function () {
+      $(".typed-cursor").addClass("h2");
+      typed.start();
+    });
+  </script>
+
+
+
+  <script  src="https://cdn.staticfile.org/anchor-js/4.2.2/anchor.min.js" ></script>
+  <script>
+    anchors.options = {
+      placement: "right",
+      visible: "hover",
+      
+    };
+    var el = "h1,h2,h3,h4,h5,h6".split(",");
+    var res = [];
+    for (item of el) {
+      res.push(".markdown-body > " + item)
+    }
+    anchors.add(res.join(", "))
+  </script>
+
+
+
+  <script  src="/crazy_ll/js/local-search.js" ></script>
+  <script>
+    var path = "/crazy_ll/local-search.xml";
+    var inputArea = document.querySelector("#local-search-input");
+    inputArea.onclick = function () {
+      searchFunc(path, 'local-search-input', 'local-search-result');
+      this.onclick = null
+    }
+  </script>
+
+
+
+  <script  src="https://cdn.staticfile.org/fancybox/3.5.7/jquery.fancybox.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+  <script>
+    $('#post img:not(.no-zoom img, img[no-zoom]), img[zoom]').each(
+      function () {
+        var element = document.createElement('a');
+        $(element).attr('data-fancybox', 'images');
+        $(element).attr('href', $(this).attr('src'));
+        $(this).wrap(element);
+      }
+    );
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?5b1a2b7048d7b2ca482bb0bcc0e2387e";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+</body>
+</html>
