@@ -176,7 +176,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      26
+      27
        分钟
     </span>
   
@@ -209,13 +209,13 @@
             <h1 style="display: none">synchronized关键字底层理解-偏向锁</h1>
             
             <div class="markdown-body" id="post-body">
-              <h1 id="偏向锁"><a href="#偏向锁" class="headerlink" title="偏向锁"></a>偏向锁</h1><h2 id="锁的简单描述"><a href="#锁的简单描述" class="headerlink" title="锁的简单描述"></a>锁的简单描述</h2><p>在了解<code>偏向锁</code>之前先了解下几个锁的大致区别。</p>
+              <h1 id="偏向锁"><a href="#偏向锁" class="headerlink" title="偏向锁"></a>偏向锁</h1><h2 id="锁的简单描述"><a href="#锁的简单描述" class="headerlink" title="锁的简单描述"></a>锁的简单描述</h2><p>在了解 <code>偏向锁</code> 之前先了解下几个锁的大致区别。</p>
 <blockquote>
 <p>在JDK6开始，syn有了很多的优化技术，如适应性自旋（Adaptive Spinning） 、 锁消除（Lock Elimination） 、 锁粗化（LockCoarsening） 、 轻量级锁（Lightweight Locking） 和偏向锁（Biased Locking） 等， 这些技术都是为了在线程之间更高效地共享数据， 以及解决竞争问题， 从而提高程序的执行效率。</p>
 </blockquote>
-<p><code>重量级锁</code>：由于<strong>线程切换以及锁的控制需要由用户态转换到内核态</strong>（线程的中断由内核实现），涉及到线程的上下文保存和恢复，是一个高成本的操作，所以称为<code>重量级锁</code>。</p>
-<p><code>轻量级锁</code>：<strong>轻量级锁的本意是在没有多线程竞争的前提下，减少重量级锁使用系统互斥产生的性能消耗。</strong>主要实现是通过<code>JAVA线程</code>的栈上申请的<code>Lock Record</code>去<code>cas</code>记录锁对象的<code>Mark Word</code>来实现。</p>
-<p><code>偏向锁</code>：目的是为了消除在在无竞争的情况下的同步原语， <strong>在<code>轻量级锁</code>的基础上更进一步的消除了<code>cas</code>操作</strong>，<code>偏向锁</code>会偏向第一个获取它的线程，如果没有竞争发生，则接下来该线程获取锁都不需要进行同步操作，如果发生竞争则会发生锁升级。</p>
+<p><code>重量级锁</code>：由于<strong>线程切换以及锁的控制需要由用户态转换到内核态</strong>（线程的中断由内核实现），涉及到线程的上下文保存和恢复，是一个高成本的操作，所以称为 <code>重量级锁</code> 。</p>
+<p><code>轻量级锁</code>：<strong>轻量级锁的本意是在没有多线程竞争的前提下，减少重量级锁使用系统互斥产生的性能消耗。</strong>主要实现是通过 <code>JAVA线程</code> 的栈上申请的 <code>Lock Record</code> 去 <code>cas</code> 记录锁对象的 <code>Mark Word</code> 来实现。</p>
+<p><code>偏向锁</code>：目的是为了消除在在无竞争的情况下的同步原语， <strong>在<code>轻量级锁</code>的基础上更进一步的消除了 <code>cas</code> 操作</strong>， <code>偏向锁</code> 会偏向第一个获取它的线程，如果没有竞争发生，则接下来该线程获取锁都不需要进行同步操作，如果发生竞争则会发生锁升级。</p>
 <h2 id="锁的关键实现：Mark-Word"><a href="#锁的关键实现：Mark-Word" class="headerlink" title="锁的关键实现：Mark Word"></a>锁的关键实现：Mark Word</h2><p>在理解锁之前，需要先理解一下对象的组成，<code>java</code>对象中在堆中的组成分为3部分</p>
 <ul>
 <li>对象头：包含2部分<ul>
@@ -228,19 +228,22 @@
 </ul>
 <h3 id="通过jol观察对象Mark-Word"><a href="#通过jol观察对象Mark-Word" class="headerlink" title="通过jol观察对象Mark Word"></a>通过jol观察对象Mark Word</h3><p>运行这样的代码，观察对象布局</p>
 <pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TestJol</span> </span>&#123;
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Test</span></span>&#123;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Test</span> </span>&#123;
         <span class="hljs-keyword">private</span> <span class="hljs-keyword">int</span> number;
+        <span class="hljs-keyword">private</span> String name;
     &#125;
+
     <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;
         Test t = <span class="hljs-keyword">new</span> Test();
+        t.name = <span class="hljs-string">"test"</span>;
         System.out.println(ClassLayout.parseInstance(t).toPrintable());
     &#125;
 &#125;</code></pre>
 
 <p>控制台得到这样的结果</p>
-<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200819205747.png" srcset="/crazy_ll/img/loading.gif" alt></p>
-<p>上面输出内容中，前8个字节就是<code>Mark Word</code>，后4个字节是类型指针，是个4字节的地址信息，然后剩下的4字节就是实例数据，<code>int</code>类型是4个字节，由于当前字节数已经是8的倍数了，所以不存在<code>对其填充的字节</code></p>
-<h3 id="通过jvm源码观察Mark-Word组成"><a href="#通过jvm源码观察Mark-Word组成" class="headerlink" title="通过jvm源码观察Mark Word组成"></a>通过jvm源码观察Mark Word组成</h3><p><code>Mark Word</code>在<code>jvm</code>源码中，对应的<code>c++</code>类为<code>markoop.hpp</code>，截取其组成</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200820192932.png" srcset="/crazy_ll/img/loading.gif" alt></p>
+<p>上面输出内容中，前8个字节就是 <code>Mark Word</code> ，紧接着的4个字节是类型指针，是个4字节的地址信息，然后剩下的共计8字节就是实例数据， <code>int</code>类型是4个字节，<code>string</code> 是引用类型，所以也是4个字节的地址 ，当前总共只有20个字节，不满足8的倍数，所以需要增加4个字节对齐，最后的4个字节就是 <code>填充的字节</code></p>
+<h3 id="通过jvm源码观察Mark-Word组成"><a href="#通过jvm源码观察Mark-Word组成" class="headerlink" title="通过jvm源码观察Mark Word组成"></a>通过jvm源码观察Mark Word组成</h3><p><code>Mark Word</code> 在 <code>jvm</code> 源码中，对应的 <code>c++</code> 类为 <code>markoop.hpp</code> ，截取其组成</p>
 <pre><code class="hljs c++"><span class="hljs-number">64</span> bits:
 --------
 unused:<span class="hljs-number">25</span> hash:<span class="hljs-number">31</span> --&gt;| unused:<span class="hljs-number">1</span>   age:<span class="hljs-number">4</span>    biased_lock:<span class="hljs-number">1</span> lock:<span class="hljs-number">2</span> (normal object)
@@ -248,13 +251,13 @@ JavaThread*:<span class="hljs-number">54</span> epoch:<span class="hljs-number">
 PromotedObject*:<span class="hljs-number">61</span> ---------------------&gt;| promo_bits:<span class="hljs-number">3</span> -----&gt;| (CMS promoted object)
 size:<span class="hljs-number">64</span> -----------------------------------------------------&gt;| (CMS <span class="hljs-built_in">free</span> block)</code></pre>
 
-<p>那么根据组成，重新整理上面输出的<code>Mark Word</code>以后是这样的</p>
+<p>那么根据组成，重新整理上面输出的 <code>Mark Word</code> 以后是这样的</p>
 <pre><code class="hljs undefined">Mark Word：<span class="hljs-number">00000000</span> <span class="hljs-number">00000000</span> <span class="hljs-number">00000000</span> <span class="hljs-number">00000000</span> <span class="hljs-number">00000000</span> <span class="hljs-number">00000000</span> <span class="hljs-number">00000000</span> <span class="hljs-number">00000001</span>(<span class="hljs-number">8</span>字节)
 类型指针：<span class="hljs-number">11111000</span> <span class="hljs-number">00000000</span> <span class="hljs-number">11000001</span> <span class="hljs-number">01000011</span> (<span class="hljs-number">4</span>字节)
 实例数据：<span class="hljs-number">0</span>(int类型<span class="hljs-number">4</span>字节)
 对齐填充：<span class="hljs-number">0</span></code></pre>
 
-<p>整理后的<code>Mark Word</code>参考<code>markoop.hpp</code>类的定义，末尾2位是锁类型标识，那么01代表的是什么呢？</p>
+<p>整理后的 <code>Mark Word</code> 参考 <code>markoop.hpp</code> 类的定义，末尾2位是锁类型标识，那么01代表的是什么呢？</p>
 <p>看一下对应锁的枚举类</p>
 <pre><code class="hljs c++"><span class="hljs-keyword">enum</span> &#123; locked_value             = <span class="hljs-number">0</span>,<span class="hljs-comment">//轻量级锁</span>
        unlocked_value           = <span class="hljs-number">1</span>,<span class="hljs-comment">//无锁</span>
@@ -267,9 +270,9 @@ size:<span class="hljs-number">64</span> ---------------------------------------
 <pre><code class="hljs undefined">注：偏向锁在应用启动时不会马上生效，有个默认等待时间5s，可以等待5秒或者通过配置参数-XX:<span class="hljs-attribute">BiasedLockingStartupDelay</span>=0来观察偏向锁</code></pre>
 
 <p>那么上面同样的代码，在我加入了这个<code>jvm</code>参数后对应的内存布局如下</p>
-<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200819205712.png" srcset="/crazy_ll/img/loading.gif" alt></p>
-<p>可以看到<code>Mark Word</code>对象中的值发生了变成，变成了偏向锁的值，这个时候叫做<code>匿名偏向</code></p>
-<p>接下来从<code>jvm源码</code>还有<code>java代码</code>，两个层面来理解一下<code>偏向锁</code>是怎么实现的。</p>
+<p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200820193146.png" srcset="/crazy_ll/img/loading.gif" alt></p>
+<p>可以看到 <code>Mark Word</code> 对象中的值发生了变成，变成了偏向锁的值，这个时候叫做 <code>匿名偏向锁</code></p>
+<p>接下来从 <code>jvm源码</code> 还有 <code>java代码</code> ，两个层面来理解一下<code>偏向锁</code>是怎么实现的。</p>
 <h2 id="从jvm源码看偏向锁"><a href="#从jvm源码看偏向锁" class="headerlink" title="从jvm源码看偏向锁"></a>从jvm源码看偏向锁</h2><pre><code class="hljs c++">CASE(_monitorenter): &#123;
         <span class="hljs-comment">//lockee是锁对象</span>
         oop lockee = STACK_OBJECT(<span class="hljs-number">-1</span>);
@@ -408,7 +411,7 @@ size:<span class="hljs-number">64</span> ---------------------------------------
 <ol>
 <li><p>线程获取锁的时候，会先获取栈顶的空闲空间</p>
 </li>
-<li><p>只有在锁对象的<code>MarkWord</code>的末尾3位为<code>001</code>的时候才会进入偏向锁流程，看一下对应的锁枚举</p>
+<li><p>只有在锁对象的 <code>MarkWord</code> 的末尾3位为 <code>001</code> 的时候才会进入偏向锁流程，看一下对应的锁枚举</p>
 </li>
 </ol>
 <ol start="3">
