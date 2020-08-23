@@ -166,7 +166,7 @@
     
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      2k 字
+      2.2k 字
     </span>
   
 
@@ -176,7 +176,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      27
+      29
        分钟
     </span>
   
@@ -272,6 +272,9 @@ size:<span class="hljs-number">64</span> ---------------------------------------
 <p>那么上面同样的代码，在我加入了这个<code>jvm</code>参数后对应的内存布局如下</p>
 <p><img src="https://hysnotepic.oss-cn-shanghai.aliyuncs.com/20200820193146.png" srcset="/crazy_ll/img/loading.gif" alt></p>
 <p>可以看到 <code>Mark Word</code> 对象中的值发生了变成，变成了偏向锁的值，这个时候叫做 <code>匿名偏向锁</code></p>
+<pre><code class="hljs undefined">[<span class="hljs-number">0</span>           | <span class="hljs-type">epoch</span> | <span class="hljs-type">age</span> | <span class="hljs-type">1</span> | <span class="hljs-type">01</span>]       lock is anonymously biased</code></pre>
+
+<p> <code>匿名偏向锁</code>：尚未偏向到任何线程，锁标志位处理101</p>
 <p>接下来从 <code>jvm源码</code> 还有 <code>java代码</code> ，两个层面来理解一下<code>偏向锁</code>是怎么实现的。</p>
 <h2 id="从jvm源码看偏向锁"><a href="#从jvm源码看偏向锁" class="headerlink" title="从jvm源码看偏向锁"></a>从jvm源码看偏向锁</h2><pre><code class="hljs c++">CASE(_monitorenter): &#123;
         <span class="hljs-comment">//lockee是锁对象</span>
@@ -310,6 +313,8 @@ size:<span class="hljs-number">64</span> ---------------------------------------
             anticipated_bias_locking_value =
               (((<span class="hljs-keyword">uintptr_t</span>)lockee-&gt;klass()-&gt;prototype_header() | thread_ident) ^ (<span class="hljs-keyword">uintptr_t</span>)mark) &amp;
               ~((<span class="hljs-keyword">uintptr_t</span>) markOopDesc::age_mask_in_place);
+            
+       			------
             <span class="hljs-comment">//如果值为0，代表线程id和epoch都是一致的</span>
             <span class="hljs-keyword">if</span>  (anticipated_bias_locking_value == <span class="hljs-number">0</span>) &#123;
               <span class="hljs-comment">// already biased towards this thread, nothing to do</span>
@@ -318,6 +323,8 @@ size:<span class="hljs-number">64</span> ---------------------------------------
               &#125;
               success = <span class="hljs-literal">true</span>;
             &#125;
+            
+       			------
             <span class="hljs-comment">// 获取偏向锁标记位的值，如果不为0说明在之前的运算中，prototype_header或者mark不是偏向模式的</span>
             <span class="hljs-comment">// 但是进到本行逻辑之前又判断过了mark-&gt;has_bias_pattern()</span>
             <span class="hljs-comment">// 所以prototype_header不为偏向模式</span>
@@ -333,6 +340,8 @@ size:<span class="hljs-number">64</span> ---------------------------------------
                   (*BiasedLocking::revoked_lock_entry_count_addr())++;
               &#125;
             &#125;
+            
+            ------
             <span class="hljs-comment">//如果epoch值不同，说明epoch已经过期，可以直接使用cas重新偏向</span>
             <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((anticipated_bias_locking_value &amp; epoch_mask_in_place) !=<span class="hljs-number">0</span>) &#123;
               <span class="hljs-comment">// try rebias</span>
@@ -352,10 +361,12 @@ size:<span class="hljs-number">64</span> ---------------------------------------
               &#125;
               success = <span class="hljs-literal">true</span>;
             &#125;
+            
+            ------
             <span class="hljs-keyword">else</span> &#123;
               <span class="hljs-comment">// try to bias towards thread in case object is anonymously biased</span>
               <span class="hljs-comment">// 通过位运算取出mark中的偏向锁，gc 分代年龄还有epoch</span>
-              markOop header = (markOop) ((<span class="hljs-keyword">uintptr_t</span>) mark &amp; ((<span class="hljs-keyword">uintptr_t</span>)markOopDesc::biased_lock_mask_in_place |
+              markOop header = (markOop) ((<span class="hljs-keyword">uintptr_t</span>) mark &amp; ((<span class="hljs-keyword">uintptr_t</span>)markOopDesc::biased_lock_mask_in_place|
                                                               (<span class="hljs-keyword">uintptr_t</span>)markOopDesc::age_mask_in_place |
                                                               epoch_mask_in_place));
               <span class="hljs-keyword">if</span> (hash != markOopDesc::no_hash) &#123;
@@ -411,11 +422,20 @@ size:<span class="hljs-number">64</span> ---------------------------------------
 <ol>
 <li><p>线程获取锁的时候，会先获取栈顶的空闲空间</p>
 </li>
-<li><p>只有在锁对象的 <code>MarkWord</code> 的末尾3位为 <code>001</code> 的时候才会进入偏向锁流程，看一下对应的锁枚举</p>
+<li><p>只有在锁对象的 <code>MarkWord</code> 的末尾3位为 <code>001</code> 的时候才会进入偏向锁流程，对应的枚举已经在前面展示了</p>
 </li>
-</ol>
-<ol start="3">
-<li>在了解这一步操作</li>
+<li><p>这一步的操作对应着之前的 <code>Mark Word</code> 来看</p>
+<pre><code class="hljs undefined"><span class="hljs-selector-tag">JavaThread</span>*<span class="hljs-selector-pseudo">:54</span> <span class="hljs-selector-tag">epoch</span><span class="hljs-selector-pseudo">:2</span> <span class="hljs-selector-tag">unused</span><span class="hljs-selector-pseudo">:1</span>   <span class="hljs-selector-tag">age</span><span class="hljs-selector-pseudo">:4</span>    <span class="hljs-selector-tag">biased_lock</span><span class="hljs-selector-pseudo">:1</span> <span class="hljs-selector-tag">lock</span><span class="hljs-selector-pseudo">:2</span> (biased object)</code></pre>
+
+<p>通过位运算将当前 <code>线程id</code> 转换为 <code>Mark Word</code> 并和原来的 <code>Mark Word</code> 进行比较</p>
+<ul>
+<li>是否是同一个线程：同一个线程的时候，偏向锁模式下是不做任何处理的</li>
+<li>是否偏向模式关闭</li>
+<li>是否 <code>epoch</code> 过期</li>
+<li>是否是 <code>匿名偏向</code> ：匿名偏向就是最开始说的，还没有偏向到任何线程的 <code>Mark Word</code></li>
+</ul>
+<p>再通过 <code>cas</code> 操作来更新锁上的 <code>Mark Word</code> ，更新成功后，<code>success = true</code> 代表偏向成功</p>
+</li>
 </ol>
 
             </div>
